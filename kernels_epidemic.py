@@ -187,23 +187,24 @@ Recover_Infected = cp.RawKernel(r'''
          seq = 0;
          offset = 0;
          curandState h;
-         int j,k;
+         int dayofinf, k, nInf_i_day;
          if(i<N){ 
            curand_init(seed+i,seq,offset,&h);
            // all recoveres after incubation
            Recovered[i]=Recovered[i]+Infected[i*ip+ip-1];
            AllInfected[i]=AllInfected[i]-Infected[i*ip+ip-1];
            Infected[i*ip+ip-1]=0;
-           for(j=ip-2; j>=0; j--) {
-             // Inf(i,1) Inf(i,2)...Inf(i,ip−2) Inf(i,ip−1) Inf(i,ip)
-             for(k=1; k<=Infected[i*ip+j]; k++) { 
-               if(curand_uniform(&h)< Pincubtrans[j]) {
+           for(dayofinf=ip-2; dayofinf>=0; dayofinf--) {
+             // Inf(i,0) Inf(i,1)...Inf(i,ip−2) Inf(i,ip−1)
+             nInf_i_day=Infected[i*ip+dayofinf]
+             for(k=1; k<=nInf_i_day; k++) { 
+               if(curand_uniform(&h)< Pincubtrans[dayofinf]) {
                  Recovered[i]=Recovered[i]+1; // one more recovers
-                 Infected[i*ip+j]=Infected[i*ip+j]-1; // one less infected
+                 Infected[i*ip+dayofinf]=Infected[i*ip+dayofinf]-1; // one less infected
                  AllInfected[i]=AllInfected[i]-1;
                }
              }
-             Infected[i*ip+j+1]=Infected[i*ip+j]; // another day for infected
+             Infected[i*ip+dayofinf+1]=Infected[i*ip+dayofinf]; // another day for infected
            }
            Infected[i*ip+0]=0; // there will be new infected later 
          }
@@ -250,7 +251,7 @@ New_Infected = cp.RawKernel(r'''
            curand_init(seed+i,seq,offset,&h);
            for(j=0; j<Susceptible[i]; j++){
              if(curand_uniform(&h) < P_infection[i]) {
-               Infected[i*ip+1]=Infected[i*ip+1]+1;
+               Infected[i*ip]=Infected[i*ip]+1; // flattened matrix Nxip, new infected at [i,0]
                AllInfected[i]=AllInfected[i]+1;
                Susceptible[i]=Susceptible[i]-1;
              }
