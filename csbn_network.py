@@ -8,6 +8,9 @@ from kernels_network import * # kernel functions (CUDA c++)
 #from kernel_functions_epidemic import * # kernel functions (CUDA c++)
 import math # for ceiling function
 
+runTRN = False
+runErdos = True
+
 def csbn_network(N, Nsp_Children, Nsp_Parents, Plink, Padd, Pret, I0, Pc, Mc,
                  blocksize_x, netindx, network_save, network_print):
     blocks=(blocksize_x,1,1) 
@@ -35,11 +38,19 @@ def csbn_network(N, Nsp_Children, Nsp_Parents, Plink, Padd, Pret, I0, Pc, Mc,
         Children_mtx_chunk.fill(0.0) 
         Parents_mtx_chunk.fill(0.0) 
         NTshift=i*NTchunk # current starting index of the kernel 
-        seed=int.from_bytes(os.urandom(4), 'big')  # get (new) random seed
-        setcpmtx(grids, blocks, (NTchunk, NTshift, cp.float32(Plink),
-                                 cp.float32(Pret), cp.float32(Padd), seed,
-                                 Children, Children_mtx_chunk,
-                                 Parents_mtx_chunk)) # creates 0/1 arrays
+        seed1=int.from_bytes(os.urandom(4), 'big')  # get (new) random seed
+
+        if runTRN:
+            seed2=int.from_bytes(os.urandom(4), 'big')  # get (new) random seed
+            trn_setcpmtx(grids, blocks, (NTchunk, NTshift, cp.float32(Plink),
+                    cp.float32(Pret), cp.float32(Padd), seed1, seed2,
+                    Children, Children_mtx_chunk, Parents_mtx_chunk)) # creates 0/1 arrays
+
+        if runErdos:
+            setcpmtx(grids, blocks, (NTchunk, NTshift, cp.float32(Plink),
+                    cp.float32(Pret), cp.float32(Padd), seed1,
+                    Children, Children_mtx_chunk, Parents_mtx_chunk)) # creates 0/1 arrays
+        
         nzc=np.asscalar(cp.count_nonzero(Children_mtx_chunk).get()) # count how many nonzeros
         if (nzc>0):  # Children's connection matrix
             N_mtx_Children=N_mtx_Children+nzc
@@ -65,11 +76,18 @@ def csbn_network(N, Nsp_Children, Nsp_Parents, Plink, Padd, Pret, I0, Pc, Mc,
         Children_mtx_chunk.fill(0.0) 
         Parents_mtx_chunk.fill(0.0) 
         NTshift=NTiterchunk 
-        seed=int.from_bytes(os.urandom(4), 'big')  # get (new) random seed
-        setcpmtx(grids, blocks, (chunk_remainder, NTshift, cp.float32(Plink),
-                                 cp.float32(Pret), cp.float32(Padd), seed,
-                                 Children, Children_mtx_chunk,
-                                 Parents_mtx_chunk))
+        seed1=int.from_bytes(os.urandom(4), 'big')  # get (new) random seed
+        
+        if runTRN:
+            seed2=int.from_bytes(os.urandom(4), 'big')  # get (new) random seed
+            trn_setcpmtx(grids, blocks, (NTchunk, NTshift, cp.float32(Plink),
+                    cp.float32(Pret), cp.float32(Padd), seed1, seed2,
+                    Children, Children_mtx_chunk, Parents_mtx_chunk)) # creates 0/1 arrays
+
+        if runErdos:
+            setcpmtx(grids, blocks, (NTchunk, NTshift, cp.float32(Plink),
+                    cp.float32(Pret), cp.float32(Padd), seed1,
+                    Children, Children_mtx_chunk, Parents_mtx_chunk)) 
         nzc=np.asscalar(cp.count_nonzero(Children_mtx_chunk).get()) 
         if (nzc>0):
             N_mtx_Children=N_mtx_Children+nzc
