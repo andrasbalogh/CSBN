@@ -5,10 +5,11 @@ import cupy as cp
 import os # needed for reading random seed form OS file /dev/random
 import sys  # for sys.exit(0) 
 from kernels_network import * # kernel functions (CUDA c++)
+from kernels_trn_network import * # kernel function for TRN 
 #from kernel_functions_epidemic import * # kernel functions (CUDA c++)
 import math # for ceiling function
 
-network = 1 # int for network choice, 1 = erdos; 2 = trn; 3 = ban
+network = 2 # int for network choice, 1 = erdos; 2 = trn; 3 = ban
 
 def csbn_network(N, Nsp_Children, Nsp_Parents, Plink, Padd, Pret, I0, Pc, Mc,
                  blocksize_x, netindx, network_save, network_print):
