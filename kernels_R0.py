@@ -71,14 +71,13 @@ Pregnancy_Newborns = cp.RawKernel(r'''
 Recover_Infected = cp.RawKernel(r'''
      #include<curand_kernel.h>
      extern "C" __global__  
-     void Recover_Infected(const int N, int* Infected, int* Recovered, const int seed, 
-            const float* Pincubtrans, int* AllInfected, const int ip){
+     void Recover_Infected(const int N, int* Infected, int* Recovered, const int seed, const float* Pincubtrans, int* AllInfected, const int ip){
          int i = blockDim.x * blockIdx.x + threadIdx.x;
-         int seq, offset, nInf_i_day;
+         int seq, offset;
          seq = 0;
          offset = 0;
          curandState h;
-         int dayofinf,k;
+         int dayofinf, k, nInf_i_day;
          if(i<N){ 
            curand_init(seed+i,seq,offset,&h);
            // all recoveres after incubation
@@ -86,8 +85,8 @@ Recover_Infected = cp.RawKernel(r'''
            AllInfected[i]=AllInfected[i]-Infected[i*ip+ip-1];
            Infected[i*ip+ip-1]=0;
            for(dayofinf=ip-2; dayofinf>=0; dayofinf--) {
-             // Inf(i,1) Inf(i,2)...Inf(i,ip−2) Inf(i,ip−1) Inf(i,ip)
-             nInf_i_day=Infected[i*ip+dayofinf]
+             // Inf(i,0) Inf(i,1)...Inf(i,ip-2) Inf(i,ip-1)
+             nInf_i_day=Infected[i*ip+dayofinf];
              for(k=1; k<=nInf_i_day; k++) { 
                if(curand_uniform(&h)< Pincubtrans[dayofinf]) {
                  Recovered[i]=Recovered[i]+1; // one more recovers
@@ -138,6 +137,7 @@ New_Infected = cp.RawKernel(r'''
          offset = 0;
          curandState h;
          int j;
+         
          if(i<N){ 
            curand_init(seed+i,seq,offset,&h);
            for(j=0; j<Susceptible[i]; j++){

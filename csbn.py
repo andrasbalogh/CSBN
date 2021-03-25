@@ -8,6 +8,8 @@ from scipy import stats
 import time
 starttime = time.time()
 
+cp.cuda.Device(7).use()
+
 # see csbn_cupy_notes.txt
 N=100000 
 Nsp_Children=2000000 
