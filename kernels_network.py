@@ -26,4 +26,3 @@ extern "C" __global__ void setcpmtx(const unsigned long int NPchunk,
        }
   }
   ''', 'setcpmtx', backend='nvcc') # have to use nvcc with curand_kernel.h
-

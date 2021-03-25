@@ -142,8 +142,7 @@ New_Infected = cp.RawKernel(r'''
            curand_init(seed+i,seq,offset,&h);
            for(j=0; j<Susceptible[i]; j++){
              if(curand_uniform(&h) < P_infection[i]) {
-               //flattened array
-               Infected[i*ip]=Infected[i*ip]+1;
+               Infected[i*ip]=Infected[i*ip]+1; // flattened matrix Nxip, new infected at [i,0]
                AllInfected[i]=AllInfected[i]+1;
                Susceptible[i]=Susceptible[i]-1;
              }
