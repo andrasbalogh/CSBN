@@ -119,8 +119,8 @@ def csbn_network(N, Nsp_Children, Nsp_Parents, Plink, Padd, Pret, I0, Pc, Mc,
     if network_print:
         from cupyx.scipy import sparse
         import matplotlib.pyplot as plt
-        Jc = (cp.floor((1+cp.sqrt(8*Children_mtx_indx[0:N_mtx_Children]+1))/2)).astype(cp.int64)
-        Ic = (Children_mtx_indx[0:N_mtx_Children] - ((Jc*(Jc-1))/2)).astype(cp.int64)
+        Jc = (cp.floor((1+cp.sqrt(8*Children_mtx_indx[0:N_mtx_Children]+1))//2)).astype(cp.int64)
+        Ic = (Children_mtx_indx[0:N_mtx_Children] - ((Jc*(Jc-1))//2)).astype(cp.int64)
         # upper triangular part
         CP = sparse.coo_matrix((cp.ones(int(N_mtx_Children), dtype=cp.float32), (Ic, Jc)), 
                                 shape=(N, N))
@@ -135,8 +135,8 @@ def csbn_network(N, Nsp_Children, Nsp_Parents, Plink, Padd, Pret, I0, Pc, Mc,
         #                      shape=(N, N))
         #Sp_Children_mtx=CP1+CP2
         #sC=np.ravel(np.sum(Sp_Children_mtx,axis=1))
-        Jp = (cp.floor((1+cp.sqrt(8*Parents_mtx_indx[0:N_mtx_Parents]+1))/2)).astype(cp.int64)
-        Ip = (Parents_mtx_indx[0:N_mtx_Parents] - ((Jp*(Jp-1))/2)).astype(cp.int64)
+        Jp = (cp.floor((1+cp.sqrt(8*Parents_mtx_indx[0:N_mtx_Parents]+1))//2)).astype(cp.int64)
+        Ip = (Parents_mtx_indx[0:N_mtx_Parents] - ((Jp*(Jp-1))//2)).astype(cp.int64)
         # upper triangular part
         PP = sparse.coo_matrix((cp.ones(int(N_mtx_Parents), dtype=cp.float32), (Ip, Jp)), 
                                 shape=(N, N))
