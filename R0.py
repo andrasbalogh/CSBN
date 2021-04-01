@@ -18,8 +18,8 @@ starttime = time.time()
 cp.cuda.Device(7).use()
 
 # see csbn_cupy_notes.txt
-N = 10000
-Nsp_Children = 2000000
+N = 100000
+Nsp_Children = 20000000
 Pc = 0.5  # 0.4 # Probability of having a child
 Mc = 7  # Maximum number of children in a family initially
 r0_repeat = 1  # how many times to repeat the disease process for averaging for each household
@@ -187,11 +187,18 @@ for row in range(rowstart, rowend+1):
                                      + cp.transpose(sparse.spmatrix.sum(CSP, axis=1)))))
     nneighbs.fill(0)
     neighbs = cp.zeros((N, MaxNeighb), dtype=cp.int32)
-    for i in range(N):
-        neighbs1 = cp.concatenate(
+    N_Index = 10
+    R0_Index_Sample = np.random.choice(N, size=N_Index, replace=False, p=None)
+    for i in R0_Index_Sample:
+        neighbs_temp = cp.concatenate(
             (CSP.getcol(i).tocsc().indices, CSP.getrow(i).indices))
-        nneighbs[i] = neighbs1.size
-        neighbs[i, 0:nneighbs[i]] = neighbs1
+        nneighbs[i] = neighbs_temp.size
+        neighbs[i, 0:nneighbs[i]] = neighbs_temp
+        for j in neighbs_temp.get():
+            neighbs_temp = cp.concatenate(
+                (CSP.getcol(j).tocsc().indices, CSP.getrow(j).indices))
+            nneighbs[j] = neighbs_temp.size
+            neighbs[j, 0:nneighbs[j]] = neighbs_temp
     t5 = time.time()
     print("Time to calculate neighbors: ", (t5-t0))
     Pregnancy0.fill(0)
@@ -203,13 +210,10 @@ for row in range(rowstart, rowend+1):
     # Pregnancy[i] = j, 0 < j < gestation - jth day of pregnancy
     pregnancy_burn_in(grids, blocks, (N, cp.float32(ssigma),
                                       seed, Children0, Pregnancy0, gestation))
-    
-    
-    N_Index = 200
-    R0_Index_Sample= np.random.choice(N, size=N_Index, replace=False,p=None) 
-    #for sample use cp.nonzero(Children0[R0_Index_Sample] * nneighbs[R0_Index_Sample])[0]
-    #for sample try using R0_Index_Sample
-    #add if statement to continue if positive (if there are neighbs and current house has children)
+
+    # for sample use cp.nonzero(Children0[R0_Index_Sample] * nneighbs[R0_Index_Sample])[0]
+    # for sample try using R0_Index_Sample
+    # add if statement to continue if positive (if there are neighbs and current house has children)
     for i_house in R0_Index_Sample:
         if(Children0[i_house]*nneighbs[i_house] == 0):
             continue
@@ -246,9 +250,11 @@ for row in range(rowstart, rowend+1):
                 Recover_Infected(grids, blocks, (N, Infected, Recovered, seed,
                                                  Pincubtrans, AllInfected, ip))
 
-                grids = (math.ceil(NT/blocksize_x), 1, 1)  # set grid size NT
+                grids = (math.ceil(N_mtx_Children/blocksize_x), 1, 1)  # set grid size NT
                 InfNeighb.fill(0)
-                Infected_Neighbors(grids, blocks, (NT, Children_mtx_indx, AllInfected,
+                #change NT to NC = 
+                #print(N_mtx_Children)
+                Infected_Neighbors(grids, blocks, (N_mtx_Children, Children_mtx_indx, AllInfected,
                                                    InfNeighb))
 
                 grids = (math.ceil(N/blocksize_x), 1, 1)  # set grid size NT
@@ -285,7 +291,7 @@ for row in range(rowstart, rowend+1):
     t1 = time.time()
     time_diff = t1-t0
     print("total run time for index house: ", round((t1 - t0)))
-    #print(R0_Index_Sample)
+    # print(R0_Index_Sample)
 
     R0[row] = R0[row]/(r0_repeat*N_Index)
     print("row:", row, "Plink:", Plink[row], "beta:", betarow, "R0:", R0[row])
