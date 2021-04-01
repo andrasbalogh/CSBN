@@ -196,7 +196,7 @@ Recover_Infected = cp.RawKernel(r'''
            Infected[i*ip+ip-1]=0;
            for(dayofinf=ip-2; dayofinf>=0; dayofinf--) {
              // Inf(i,0) Inf(i,1)...Inf(i,ip−2) Inf(i,ip−1)
-             nInf_i_day=Infected[i*ip+dayofinf]
+             nInf_i_day=Infected[i*ip+dayofinf];
              for(k=1; k<=nInf_i_day; k++) { 
                if(curand_uniform(&h)< Pincubtrans[dayofinf]) {
                  Recovered[i]=Recovered[i]+1; // one more recovers
