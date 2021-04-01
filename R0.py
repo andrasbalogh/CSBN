@@ -252,8 +252,8 @@ for row in range(rowstart, rowend+1):
 
                 grids = (math.ceil(N_mtx_Children/blocksize_x), 1, 1)  # set grid size NT
                 InfNeighb.fill(0)
-                #change NT to NC = 
                 #print(N_mtx_Children)
+                #changed NT to N_mtx_Children
                 Infected_Neighbors(grids, blocks, (N_mtx_Children, Children_mtx_indx, AllInfected,
                                                    InfNeighb))
 
