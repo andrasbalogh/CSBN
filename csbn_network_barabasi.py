@@ -3,17 +3,17 @@ import matplotlib.pyplot as plt
 import cupy as cp # CUDA accelerated library
 import sys
 import os # needed for reading random seed form OS file /dev/random
-from kernels_barabasi import * # kernel functions (CUDA c++)
+from kernels_network_barabasi import * # kernel functions (CUDA c++)
 blocksize_x = 1024 # maximum size of 1D block is 1024 threads
 Pc = 0.4
 Padd=0.0004;  # parents' network probability of adding a connection if children did not have one
 Pret=0.6    # parents' network probability of retaining children's connection
 Mc = 7
-N = 100000
+N = 100
 Nsp_Children = 1000000
 Nsp_Parents = 1000000
 
-def barabasi (N, Nsp_Children, Nsp_Parents, Pc, Mc, Padd, Pret):
+def barabasifn (N, Nsp_Children, Nsp_Parents, Pc, Mc, Padd, Pret):
 
     N_mtx_Children = 0 # will store the actual number of connections
     N_mtx_Parents = 0 # will store the actual number of connections
@@ -38,7 +38,7 @@ def barabasi (N, Nsp_Children, Nsp_Parents, Pc, Mc, Padd, Pret):
         p_mtx_index.fill(0)
         seed=int.from_bytes(os.urandom(4),'big') # Random seed from OS
         #grids=(j//blocksize_x+ 1*(j % blocksize_x != 0),1,1) # set grid size
-        childrens_barabasi(grids, blocks, (j, seed, Sumcd, Children, deg, 
+        barabasi(grids, blocks, (j, seed, Sumcd, Children, deg, 
             c_mtx_index, p_mtx_index, cp.float32(Pret), cp.float32(Padd)))
         Sumcd=cp.dot(Children,deg).get().item()
         #Sumcd=Sumcd+changed
@@ -91,4 +91,4 @@ def barabasi (N, Nsp_Children, Nsp_Parents, Pc, Mc, Padd, Pret):
     nx.draw(G, with_labels=True) 
     plt.show()"""
 
-barabasi (N, Nsp_Children, Nsp_Parents, Pc, Mc, Padd, Pret)
+barabasifn (N, Nsp_Children, Nsp_Parents, Pc, Mc, Padd, Pret)
