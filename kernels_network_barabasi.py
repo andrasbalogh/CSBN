@@ -1,9 +1,9 @@
 import cupy as cp
 
-childrens_barabasi = cp.RawKernel(r'''
+barabasi = cp.RawKernel(r'''
         #include <curand_kernel.h>
         extern "C" __global__
-        void childrens_barabasi(const unsigned long int j, int seed, 
+        void barabasi(const unsigned long int j, int seed, 
 			const int Sumcd, const int* Children, int* deg, 
 			unsigned long int* c_mtx_index, unsigned long int* p_mtx_index, 
 			const float Pret, const float Padd){
@@ -25,4 +25,4 @@ childrens_barabasi = cp.RawKernel(r'''
 				else if(curand_uniform(&h)<Padd){p_mtx_index[i]=k;}
 			}
         }
-''', 'childrens_barabasi', backend = 'nvcc')
+''', 'barabasi', backend = 'nvcc')
