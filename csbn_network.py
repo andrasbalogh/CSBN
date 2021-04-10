@@ -5,13 +5,12 @@ import cupy as cp
 import os # needed for reading random seed form OS file /dev/random
 import sys  # for sys.exit(0) 
 from kernels_network import * # kernel functions (CUDA c++)
-from kernels_trn_network import * # kernel function for TRN 
+from kernels_trn_network import * 
+from kernels_gamma_network import *
 #from kernel_functions_epidemic import * # kernel functions (CUDA c++)
 import math # for ceiling function
 
-network = 2 # int for network choice, 1 = erdos; 2 = trn; 3 = ban
-
-def csbn_network(N, Nsp_Children, Nsp_Parents, Plink, Padd, Pret, I0, Pc, Mc,
+def csbn_network(network_func, N, Nsp_Children, Nsp_Parents, Plink, Padd, Pret, I0, Pc, Mc, lambdaTheta,
                  blocksize_x, netindx, network_save, network_print):
     blocks=(blocksize_x,1,1) 
     NT=(N*(N-1))//2 # Number of upper triangular entries
@@ -33,24 +32,18 @@ def csbn_network(N, Nsp_Children, Nsp_Parents, Plink, Padd, Pret, I0, Pc, Mc,
     Parents_mtx_indx=cp.zeros(Nsp_Parents, dtype=cp.int64)
     Parents_mtx_chunk=cp.zeros(NTchunk, dtype=cp.int32)
     grids=(math.ceil(NTchunk/blocksize_x),1,1) 
+    
     for i in range(NTiter):  # going through the chunks i=0,1,...,NTiter-1
         #print("Iteration",i," out of",NTiter)
         Children_mtx_chunk.fill(0.0) 
         Parents_mtx_chunk.fill(0.0) 
         NTshift=i*NTchunk # current starting index of the kernel 
-        seed1=int.from_bytes(os.urandom(4), 'big')  # get (new) random seed
+        seed=int.from_bytes(os.urandom(4), 'big')  # get (new) random seed
 
-        if (network == 1):
-            setcpmtx(grids, blocks, (NTchunk, NTshift, cp.float32(Plink),
-                    cp.float32(Pret), cp.float32(Padd), seed1,
-                    Children, Children_mtx_chunk, Parents_mtx_chunk)) # creates 0/1 arrays
+        network_func(grids, blocks, (NTchunk, NTshift, cp.float32(Plink),
+                    cp.float32(Pret), cp.float32(Padd), cp.float32(lambdaTheta), seed,
+                    Children, Children_mtx_chunk, Parents_mtx_chunk))
 
-        if (network == 2):
-            seed2=int.from_bytes(os.urandom(4), 'big')  # get (new) random seed
-            trn_setcpmtx(grids, blocks, (NTchunk, NTshift, cp.float32(Plink),
-                    cp.float32(Pret), cp.float32(Padd), seed1, seed2,
-                    Children, Children_mtx_chunk, Parents_mtx_chunk)) # creates 0/1 arrays
-        
         nzc=np.asscalar(cp.count_nonzero(Children_mtx_chunk).get()) # count how many nonzeros
         if (nzc>0):  # Children's connection matrix
             N_mtx_Children=N_mtx_Children+nzc
@@ -76,18 +69,11 @@ def csbn_network(N, Nsp_Children, Nsp_Parents, Plink, Padd, Pret, I0, Pc, Mc,
         Children_mtx_chunk.fill(0.0) 
         Parents_mtx_chunk.fill(0.0) 
         NTshift=NTiterchunk 
-        seed1=int.from_bytes(os.urandom(4), 'big')  # get (new) random seed
+        seed=int.from_bytes(os.urandom(4), 'big')  # get (new) random seed
         
-        if (network == 1):
-            setcpmtx(grids, blocks, (NTchunk, NTshift, cp.float32(Plink),
-                    cp.float32(Pret), cp.float32(Padd), seed1,
-                    Children, Children_mtx_chunk, Parents_mtx_chunk)) # creates 0/1 arrays
-
-        if (network == 2):
-            seed2=int.from_bytes(os.urandom(4), 'big')  # get (new) random seed
-            trn_setcpmtx(grids, blocks, (NTchunk, NTshift, cp.float32(Plink),
-                    cp.float32(Pret), cp.float32(Padd), seed1, seed2,
-                    Children, Children_mtx_chunk, Parents_mtx_chunk)) # creates 0/1 arrays 
+        network_func(grids, blocks, (NTchunk, NTshift, cp.float32(Plink),
+                    cp.float32(Pret), cp.float32(Padd), cp.float32(lambdaTheta), seed,
+                    Children, Children_mtx_chunk, Parents_mtx_chunk))
 
         nzc=np.asscalar(cp.count_nonzero(Children_mtx_chunk).get()) 
 
@@ -119,39 +105,20 @@ def csbn_network(N, Nsp_Children, Nsp_Parents, Plink, Padd, Pret, I0, Pc, Mc,
     if network_print:
         from cupyx.scipy import sparse
         import matplotlib.pyplot as plt
-        Jc = (cp.floor((1+cp.sqrt(8*Children_mtx_indx[0:N_mtx_Children]+1))//2)).astype(cp.int64)
-        Ic = (Children_mtx_indx[0:N_mtx_Children] - ((Jc*(Jc-1))//2)).astype(cp.int64)
+        Jc = (cp.floor((1+cp.sqrt(8*Children_mtx_indx[0:N_mtx_Children]+1))/2)).astype(cp.int64)
+        Ic = (Children_mtx_indx[0:N_mtx_Children] - ((Jc*(Jc-1))/2)).astype(cp.int64)
         # upper triangular part
         CP = sparse.coo_matrix((cp.ones(int(N_mtx_Children), dtype=cp.float32), (Ic, Jc)), 
                                 shape=(N, N))
         sC= cp.ravel(sparse.spmatrix.sum(CP, axis=0)+cp.transpose(sparse.spmatrix.sum(CP, axis=1)))
-        #Jc=(np.floor((1+np.sqrt(8*Children_mtx_indx[0:N_mtx_Children].get()+1))/2)).astype(np.int64)
-        #Ic=(Children_mtx_indx[0:N_mtx_Children].get()-((Jc*(Jc-1))/2)).astype(np.int64) 
-        #CP=sparse.coo_matrix((np.ones(int(N_mtx_Children),dtype=np.float32),
-        #                       (Ic.astype('float32'), Jc.astype('float32'))),
-        #                      shape=(N, N))
-        #CP2=sparse.coo_matrix((np.ones(int(N_mtx_Children),dtype=np.float32),
-        #                       (Jc.astype('float32'), Ic.astype('float32'))),
-        #                      shape=(N, N))
-        #Sp_Children_mtx=CP1+CP2
-        #sC=np.ravel(np.sum(Sp_Children_mtx,axis=1))
-        Jp = (cp.floor((1+cp.sqrt(8*Parents_mtx_indx[0:N_mtx_Parents]+1))//2)).astype(cp.int64)
-        Ip = (Parents_mtx_indx[0:N_mtx_Parents] - ((Jp*(Jp-1))//2)).astype(cp.int64)
+        
+        Jp = (cp.floor((1+cp.sqrt(8*Parents_mtx_indx[0:N_mtx_Parents]+1))/2)).astype(cp.int64)
+        Ip = (Parents_mtx_indx[0:N_mtx_Parents] - ((Jp*(Jp-1))/2)).astype(cp.int64)
         # upper triangular part
         PP = sparse.coo_matrix((cp.ones(int(N_mtx_Parents), dtype=cp.float32), (Ip, Jp)), 
                                 shape=(N, N))
         sP= cp.ravel(sparse.spmatrix.sum(PP, axis=0)+cp.transpose(sparse.spmatrix.sum(PP, axis=1)))
         
-        #Jp=(np.floor((1+np.sqrt(8*Parents_mtx_indx[0:N_mtx_Parents].get()+1))/2)).astype(np.int64) 
-        #Ip=(Parents_mtx_indx[0:N_mtx_Parents].get()-(Jp-1)*Jp/2).astype(np.int64) 
-        #PP1=sparse.coo_matrix((np.ones(int(N_mtx_Parents),dtype=np.float32),
-        #                        (Ip.astype('float32'), Jp.astype('float32'))),
-        #                        shape=(N, N))
-        #PP2=sparse.coo_matrix((np.ones(int(N_mtx_Parents),dtype=np.float32),
-        #                   (Jp.astype('float32'), Ip.astype('float32'))),
-        #                  shape=(N, N))
-        #Sp_Parents_mtx=PP1+PP2
-        #sP=np.ravel(np.sum(Sp_Parents_mtx,axis=1))
         M=int(max(cp.amax(sC),np.amax(sP)))+1
         C_P_hist = plt.figure(1)
         plt.hist([sC.get(),sP.get()], bins=range(M+1), align='left',rwidth=0.9, label=["Children", "Parents"])
