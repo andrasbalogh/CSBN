@@ -1,10 +1,10 @@
 import cupy as cp
 
-setcpmtx = cp.RawKernel(r'''
+ern_cpmtx = cp.RawKernel(r'''
 #include <curand_kernel.h>             //needed for curand 
-extern "C" __global__ void setcpmtx(const unsigned long int NPchunk, 
+extern "C" __global__ void ern_cpmtx(const unsigned long int NPchunk, 
            const unsigned long int NPshift, const float Plink, 
-           const float Pret, const float Padd, int seed, const int* Children, 
+           const float Pret, const float Padd, const float lambdaTheta, int seed, const int* Children, 
            int* Children_mtx_chunk, int* Parents_mtx_chunk){
       unsigned long int k = blockDim.x * blockIdx.x + threadIdx.x;
       unsigned long int i, j, seq, offset;
@@ -25,4 +25,4 @@ extern "C" __global__ void setcpmtx(const unsigned long int NPchunk,
          }
        }
   }
-  ''', 'setcpmtx', backend='nvcc') # have to use nvcc with curand_kernel.h
+  ''', 'ern_cpmtx', backend='nvcc') # have to use nvcc with curand_kernel.h
