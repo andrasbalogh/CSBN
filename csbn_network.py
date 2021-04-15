@@ -110,6 +110,7 @@ def csbn_network(network_func, N, Nsp_Children, Nsp_Parents, Plink, Padd, Pret, 
         # upper triangular part
         CP = sparse.coo_matrix((cp.ones(int(N_mtx_Children), dtype=cp.float32), (Ic, Jc)), 
                                 shape=(N, N))
+        csbn_network.CP = CP.tocsr()
         sC= cp.ravel(sparse.spmatrix.sum(CP, axis=0)+cp.transpose(sparse.spmatrix.sum(CP, axis=1)))
         
         Jp = (cp.floor((1+cp.sqrt(8*Parents_mtx_indx[0:N_mtx_Parents]+1))/2)).astype(cp.int64)

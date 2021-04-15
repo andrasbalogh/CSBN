@@ -4,12 +4,16 @@
 # from csbn_R0 import *  # epidemic part
 import os
 import sys  # for stopping code if needed
+from csbn_network import *  # network creation part
+from csbn_network_barabasi import *
+from csbn_epidemic import *  # epidemic part
 from kernels_R0 import *
 from scipy import stats
 from cupyx.scipy import sparse
 from csv import reader
 import cupy as cp
 import numpy as np
+from numpy import load
 import math  # for ceiling function
 import time
 starttime = time.time()
@@ -18,8 +22,13 @@ starttime = time.time()
 cp.cuda.Device(7).use()
 
 # see csbn_cupy_notes.txt
-N = 100000
-Nsp_Children = 20000000
+N = 1000
+Nsp_Children = 200000
+network_choice = "ban_cpmtx" 
+#network_choice = trnGamma_cpmtx
+#network_choice = ern_cpmtx
+#network_choice = trnExp_cpmtx
+lambdaTheta = -40.0 # parameter for trn #-20
 Pc = 0.5  # 0.4 # Probability of having a child
 Mc = 7  # Maximum number of children in a family initially
 r0_repeat = 1  # how many times to repeat the disease process for averaging for each household
@@ -35,8 +44,8 @@ cumprob = stats.gamma.cdf(disc, shape, scale=1)
 Pincubtrans = cp.asarray(
     (cumprob[1:ip+1]-cumprob[0:ip])/(cumprob[ip]-cumprob[0:ip]), dtype=cp.float32)
 
-network_save = 0
-network_print = 0
+network_save = 1
+network_print = 1
 epidemic_save = 0
 epidemic_print = 0
 blocksize_x = 1024  # maximum size of 1D block is 1024 threads
@@ -103,84 +112,16 @@ for row in range(rowstart, rowend+1):
     Plinkrow = Plink[row]
     betarow = bbeta[row]
     betahrow = bbeta[row]*h[row]
-    for i in range(NTiter):  # going through the chunks i=0,1,...,NTiter-1
-        # print("Iteration",i," out of",NTiter)
-        Children_mtx_chunk.fill(0.0)
-        NTshift = i*NTchunk  # current starting index of the kernel
-        seed = 1
-        # int.from_bytes(os.urandom(4), 'big')  # get (new) random seed
-        setcpmtxR0(grids, blocks, (NTchunk, NTshift, cp.float32(Plinkrow),
-                                   seed, Children0, Children_mtx_chunk))  # creates 0/1 arrays
-        # count how many nonzeros
-        nzc = cp.count_nonzero(Children_mtx_chunk).get().item()
-        if (nzc > 0):  # Children's connection matrix
-            N_mtx_Children = N_mtx_Children+nzc
-            if (N_mtx_Children > Nsp_Children):
-                sys.exit("Error, must increase Nsp_Children!")
-            cp.put(Children_mtx_indx, cp.arange(N_mtx_Children-nzc,
-                                                stop=N_mtx_Children, step=1,
-                                                dtype=cp.int64),
-                   cp.add(cp.flatnonzero(Children_mtx_chunk), NTshift))
 
-    # remainder of the matrix
-    if (chunk_remainder > 0):
-        grids = (math.ceil(chunk_remainder/blocksize_x), 1, 1)
-        Children_mtx_chunk.fill(0.0)
-        NTshift = NTiterchunk
-        seed = 1
-        # int.from_bytes(os.urandom(4), 'big')  # get (new) random seed
-        setcpmtxR0(grids, blocks, (chunk_remainder, NTshift, cp.float32(Plinkrow),
-                                   seed, Children0, Children_mtx_chunk))
-        nzc = cp.count_nonzero(Children_mtx_chunk).get().item()
-        if (nzc > 0):
-            N_mtx_Children = N_mtx_Children+nzc
-            if (N_mtx_Children > Nsp_Children):
-                sys.exit("Error, must increase Nsp_Children")
-            cp.put(Children_mtx_indx, cp.arange(N_mtx_Children-nzc,
-                                                stop=N_mtx_Children, step=1,
-                                                dtype=cp.int64),
-                   cp.add(cp.flatnonzero(Children_mtx_chunk), NTshift))
-
-    Jc = (cp.floor(
-        (1+cp.sqrt(8*Children_mtx_indx[0:N_mtx_Children]+1))/2)).astype(cp.int64)
-    Ic = (Children_mtx_indx[0:N_mtx_Children] -
-          ((Jc*(Jc-1))/2)).astype(cp.int64)
-    # upper triangular part in coordinate format
-    CSP = sparse.coo_matrix((cp.ones(int(N_mtx_Children), dtype=cp.float32), (Ic, Jc)),
-                            shape=(N, N))
-    CSP = CSP.tocsr()  # convert to compresses sparse row format
-    if network_save:
-        filename = "data/csbn_network{:03d}".format(row)
-        np.savez(filename, N=N, Children=Children0.get(), NC=N_mtx_Children,
-                 Children_mtx_indx=Children_mtx_indx[0:N_mtx_Children].get(),
-                 Plink=Plinkrow)
-    if network_print:
-        import matplotlib.pyplot as plt
-        # add rows and columns of the upper triangular part
-        # to get total number of connections for each household
-        sC = cp.ravel(sparse.spmatrix.sum(CSP, axis=0) +
-                      cp.transpose(sparse.spmatrix.sum(CSP, axis=1)))
-        C_P_hist = plt.figure(1)
-        plt.hist([sC.get()], bins=range(int(cp.amax(sC))+2),
-                 align='left', rwidth=0.9, label=["Children"])
-        plt.xlabel('Number of connections', fontsize=15)
-        plt.ylabel('Frequency', fontsize=15)
-        plt.grid(True)
-        plt.legend(prop={'size': 10})
-        plt.title("$P_{link}=$"+str(Plinkrow)+", $N=$"+str(N))
-        filename = "data/network_diagnostics{:03d}.pdf".format(row)
-        plt.savefig(filename)
-        plt.close()
-        # below code visualizes network
-        # plt.figure(2)
-        #import networkx as nx
-        #njc=Jc.get(); nic=Ic.get()
-        #G = nx.Graph()
-        # for i in range(N_mtx_Children):
-        # print(nip[i], njp[i])
-        #    G.add_edge(nic[i], njc[i])
-        #nx.draw(G, with_labels=True)
-        # plt.show()
+    # call for network creation
+    if (network_choice == "ban_cpmtx"):
+        barabasifn(blocksize_x, N, Nsp_Children, 6000, 0, Pc,
+               Mc, 0, 0, 3, network_save, network_print)
+        CSP = barabasifn.CP.tocsr()
+    else:
+        csbn_network(network_choice, N, Nsp_Children, 6000, Plinkrow, 0, 0, 0, Pc, Mc, lambdaTheta,
+                     blocksize_x, 3, network_save, network_print)
+        CSP = csbn_network.CP.tocsr()
     t0 = time.time()
     print("Time to create network: ", (t0-t4))
     MaxNeighb = int(cp.amax(cp.ravel(sparse.spmatrix.sum(CSP, axis=0)
@@ -250,10 +191,11 @@ for row in range(rowstart, rowend+1):
                 Recover_Infected(grids, blocks, (N, Infected, Recovered, seed,
                                                  Pincubtrans, AllInfected, ip))
 
-                grids = (math.ceil(N_mtx_Children/blocksize_x), 1, 1)  # set grid size NT
+                grids = (math.ceil(N_mtx_Children/blocksize_x),
+                         1, 1)  # set grid size NT
                 InfNeighb.fill(0)
-                #print(N_mtx_Children)
-                #changed NT to N_mtx_Children
+                # print(N_mtx_Children)
+                # changed NT to N_mtx_Children
                 Infected_Neighbors(grids, blocks, (N_mtx_Children, Children_mtx_indx, AllInfected,
                                                    InfNeighb))
 
