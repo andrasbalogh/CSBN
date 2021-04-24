@@ -71,7 +71,7 @@ def csbn_network(network_func, N, Nsp_Children, Nsp_Parents, Plink, Padd, Pret, 
         NTshift=NTiterchunk 
         seed=int.from_bytes(os.urandom(4), 'big')  # get (new) random seed
         
-        network_func(grids, blocks, (NTchunk, NTshift, cp.float32(Plink),
+        network_func(grids, blocks, (chunk_remainder, NTshift, cp.float32(Plink),
                     cp.float32(Pret), cp.float32(Padd), cp.float32(lambdaTheta), seed,
                     Children, Children_mtx_chunk, Parents_mtx_chunk))
 
