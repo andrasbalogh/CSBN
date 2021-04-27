@@ -4,20 +4,18 @@
 from csbn_network import *  # network creation part
 from csbn_network_barabasi import *
 from csbn_epidemic import *  # epidemic part
+from variables import *
 from scipy import stats
 
 import time
 starttime = time.time()
-cp.cuda.Device(5).use()  # GPU used (Thalia)
+cp.cuda.Device(gpuNum).use()  # GPU used
 
-network_choice = "ban_cpmtx" 
-# network_choice = trnGamma_cpmtx 
-# network_choice = ern_cpmtx 
-# network_choice = trnExp_cpmtx
+network_choice = network
 
 # see csbn_cupy_notes.txt
-N=100 #000
-Nsp_Children=20000000 
+N= population_size
+Nsp_Children=20000000
 Nsp_Parents=6000000 
 #Plink=0.00028;   # children's network probability of a link 
 #Padd=0.001;  # parents' network probability of adding a connection if children did not have one
@@ -36,7 +34,7 @@ blocksize_x = 1024 # maximum size of 1D block is 1024 threads
 NStart_netindx=3 # starting index of network
 NEnd_netindx=3   # end index of network
 
-lambdaTheta = -40.0 # parameter for trn #-20
+lambdaTheta = lt_trnExp # parameter for trn #-20
 
 # epidemics parameters
 q=0.5           # Probability of households' signal matching their vaccination opinion, pv_info_update
