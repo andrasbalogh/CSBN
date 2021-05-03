@@ -11,7 +11,14 @@ import time
 starttime = time.time()
 cp.cuda.Device(gpuNum).use()  # GPU used
 
-network_choice = network
+if (network == 1):
+    network_type = "ban_cpmtx"
+elif (network == 2):
+    network_type = trnGamma_cpmtx
+elif (network == 3):
+    network_type = ern_cpmtx 
+elif (network == 4):
+    network_type = trnExp_cpmtx
 
 # see csbn_cupy_notes.txt
 N= population_size
@@ -66,10 +73,10 @@ if not os.path.exists('data'):
 
 for netindx in range(NStart_netindx,NEnd_netindx+1):
     if network_run:
-        if (network_choice == "ban_cpmtx"):
+        if (network_type == "ban_cpmtx"):
             barabasifn (blocksize_x, N, Nsp_Children, Nsp_Parents, I0, Pc, Mc, Padd, Pret, netindx, network_save, network_print)
         else:
-            csbn_network(network_choice, N, Nsp_Children, Nsp_Parents, Plink, Padd, Pret, I0, Pc, Mc, lambdaTheta,
+            csbn_network(network_type, N, Nsp_Children, Nsp_Parents, Plink, Padd, Pret, I0, Pc, Mc, lambdaTheta,
                     blocksize_x, netindx, network_save, network_print)
         
         print("csbn_network low: ",NStart_netindx," high: ",NEnd_netindx, "done: ",netindx)
