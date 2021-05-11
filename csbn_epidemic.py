@@ -4,8 +4,10 @@ import os  # for reading random seed from OS
 import sys # for stopping code if needed
 import matplotlib.pyplot as plt
 from kernels_epidemic import * # kernel functions (CUDA c++)
+import math # for ceiling function
+from cupyx.scipy import sparse
 
-def csbn_epidemic(N, I0, q, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
+def csbn_epidemic(N, I0, q, qeps, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
                   Peff, ssigma, gestation, MaxDays, ip, blocksize_x, netindx,
                   Pincubtrans, epidemic_save, epidemic_print):
         #N, Nsp_Children, Nsp_Parents, Plink, Padd, Pret, I0, Pc, Mc,
@@ -14,8 +16,8 @@ def csbn_epidemic(N, I0, q, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
     filename="data/csbn_network{:03d}.npz".format(netindx)
     data=np.load(filename)
     Ntemp=np.asscalar(data['N'])    # Number of households
-    if(Ntemp!=N): sys.exit("Error, N=",N," specified does not match N=",
-                           Ntemp, " from data file!")
+    if(Ntemp!=N): sys.exit(["Error, N=",N," specified does not match N=",
+                           Ntemp, " from data file!"])
     NC=np.asscalar(data['NC'])  # Number of children connections, length of Children_mtx_indx
     NP=np.asscalar(data['NP'])  # Number of parent connections, length of Parents_mtx_indx
     Plink=np.asscalar(data['Plink']) # Probability that there is a connection between children's households
@@ -30,7 +32,36 @@ def csbn_epidemic(N, I0, q, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
     Susceptible=cp.asarray(data['Susceptible'],dtype=cp.int32)  # Total number of susceptible children in each household, Length=N    
     Children=cp.add(AllInfected,Susceptible)  # Total number of children. Later newborns are added
 
-    # Setting the parameters was here
+    if(q-qeps<0 or q+qeps>1):
+        sys.exit("Error! (q-qeps,q+qeps)=(%5.3f,%5.3f) is not in the [0,1] range!"% (q-qeps, q+qeps))
+
+    if qeps==0.0:
+        qij=q*cp.ones(NP, dtype=cp.float32)
+        qji=q*cp.ones(NP, dtype=cp.float32)
+    else:
+        qij=cp.random.uniform(low=q-qeps, high=q+qeps, size=NP)
+        qji=cp.random.uniform(low=q-qeps, high=q+qeps, size=NP)
+    
+    Pq_yes=cp.ones(N, dtype=cp.float32)
+    P1q_yes=cp.ones(N, dtype=cp.float32)
+    Pq_no=cp.ones(N, dtype=cp.float32)
+    P1q_no=cp.ones(N, dtype=cp.float32)
+    
+    '''Jp = (cp.floor((1+cp.sqrt(8*Parents_mtx_indx+1))/2)).astype(cp.int64)
+    Ip = (Parents_mtx_indx - ((Jp*(Jp-1))/2)).astype(cp.int64)
+    # upper triangular part
+    PP = sparse.coo_matrix((cp.ones(int(NP), dtype=cp.float32), (Ip, Jp)), shape=(N, N))
+    Psp=PP.tocsr()
+    MaxNeighb = int(cp.amax(cp.ravel(sparse.spmatrix.sum(Psp, axis=0) + cp.transpose(sparse.spmatrix.sum(Psp, axis=1)))))
+    #print(MaxNeighb)
+    nneighbs = cp.zeros((N), dtype=cp.int32)
+    neighbs = cp.zeros((N, MaxNeighb), dtype=cp.int32)
+    for i in range(N):
+        neighbs_temp = cp.concatenate((Psp.getcol(i).tocsc().indices, Psp.getrow(i).indices))
+        nneighbs[i] = neighbs_temp.size
+        neighbs[i, 0:nneighbs[i]] = neighbs_temp
+    #print(neighbs)
+    #print(nneighbs)'''
 
     Infected=cp.zeros((N,ip),dtype=cp.int32)    
     Pregnancy=cp.zeros(N, dtype=cp.int32)               # Days of pregnancy in each household[0,gestation]
@@ -55,7 +86,7 @@ def csbn_epidemic(N, I0, q, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
     P_infection=cp.zeros(N, dtype=cp.float32)  # Probability of infection based on number of infected children in the neighborhood and in the household 
     Infected[:,1]=AllInfected                  # Newly infected children on the first day
     blocks=(blocksize_x,1,1)    # number of blocks in the grid to cover all indices see grid later
-    grids=(N//blocksize_x+ 1*(N % blocksize_x != 0),1,1) # set grid size
+    grids=(math.ceil(N/blocksize_x),1,1) # set grid size
     seed=int.from_bytes(os.urandom(4),'big') # Random seed from OS
     # Uses the number of existing children and birth rate (ssigma) to create pregnancies at different stages in each household.
     # Pregnancy[i] = 0 - no pregnancy
@@ -91,19 +122,28 @@ def csbn_epidemic(N, I0, q, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
     
         # Converts Vacc_yesnonever=-1,0 into Nbrvacc_yes=0 &  Nbrvacc_no=1
         # Converts Vacc_yesnonever=+1 into Nbrvacc_yes=1 &  Nbrvacc_no=0
-        grids=(N//blocksize_x+ 1*(N % blocksize_x != 0),1,1) # set grid size N
+        grids=(math.ceil(N/blocksize_x),1,1) # set grid size N
         Vaccinators_Separate(grids, blocks, (N, Vaccinator_yesnonever, Nbrvacc_yes, Nbrvacc_no))
 
         # Counts how many neighbors vaccinate or do not vaccinate
-        grids=(NP//blocksize_x+ 1*(NP % blocksize_x != 0),1,1) # set grid size NP
-        Pressure_Update(grids, blocks, (NP, Parents_mtx_indx, Vaccinator_yesnonever, Nbrvacc_yes, Nbrvacc_no))
+        grids=(math.ceil(NP/blocksize_x),1,1) # set grid size NP
+        # Pressure_Update(grids, blocks, (NP, Parents_mtx_indx, Vaccinator_yesnonever, Nbrvacc_yes, Nbrvacc_no))
+        Pq_yes.fill(1.0)
+        P1q_yes.fill(1.0)
+        Pq_no.fill(1.0)
+        P1q_no.fill(1.0)
+        Pressure_Update(grids, blocks, (NP, Parents_mtx_indx, Vaccinator_yesnonever, Pq_yes, P1q_yes, Pq_no, 
+                P1q_no, qij, qji))
 
-        # p0 is the (global) probability to vaccinate based on total adverse effects and total infection, without social influence
-        p0= 1.0/(1.0+np.exp(ggamma*np.asscalar(cp.sum(Adverse).get())-aalpha*np.asscalar(cp.sum(Infected_Total).get())))
-        grids=(N//blocksize_x+ 1*(N % blocksize_x != 0),1,1) # set grid size N
+        # pr is the (global) probability to vaccinate based on total adverse effects and total infection, without social influence
+        pr= 1.0/(1.0+np.exp(ggamma*np.asscalar(cp.sum(Adverse).get())-aalpha*np.asscalar(cp.sum(Infected_Total).get())))
+
+        grids=(math.ceil(N/blocksize_x),1,1) # set grid size N
         # Updates PV_info - the probability to vaccinate based on social influence for each household
         # Social influence is based on the number of neighbors that vaccinate or do not vaccinate
-        pv_info_update(grids, blocks, (N, PV_info, cp.float32(p0), cp.float32(q), Nbrvacc_yes, Nbrvacc_no, Vaccinator_yesnonever))
+        #pv_info_update(grids, blocks, (N, PV_info, cp.float32(p0), cp.float32(q), Nbrvacc_yes, Nbrvacc_no, 
+        #        Vaccinator_yesnonever))
+        pv_info_update(grids, blocks, (N, PV_info, cp.float32(pr), Vaccinator_yesnonever, Pq_yes, P1q_yes, Pq_no, P1q_no))
 
         # Of the households that may vaccinate, update based on PV_info. Never-vaccinators will not change
         seed=int.from_bytes(os.urandom(4),'big') # Generates random seed from OS
@@ -121,11 +161,11 @@ def csbn_epidemic(N, I0, q, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
         seed=int.from_bytes(os.urandom(4),'big') # Generates random seed from OS
         Recover_Infected(grids, blocks, (N, Infected, Recovered, seed, Pincubtrans, AllInfected, ip))
     
-        grids=(NC//blocksize_x+ 1*(NC % blocksize_x != 0),1,1) # set grid size NC
+        grids=(math.ceil(NC/blocksize_x),1,1) # set grid size NC
         InfNeighb.fill(0)
         Infected_Neighbors(grids, blocks, (NC, Children_mtx_indx, AllInfected, InfNeighb))
     
-        grids=(N//blocksize_x+ 1*(N % blocksize_x != 0),1,1) # set grid size
+        grids=(math.ceil(N/blocksize_x),1,1) # set grid size
         Pinfection_update(grids, blocks, (N, P_infection, InfNeighb, Children, AllInfected, cp.float32(bbeta), cp.float32(bbetah)))
     
         seed=int.from_bytes(os.urandom(4),'big') # Generates random seed from OS
@@ -139,7 +179,7 @@ def csbn_epidemic(N, I0, q, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
         Daily_Suscep[day] = cp.sum(Susceptible)
         Daily_Recovered[day] = cp.sum(Recovered)
         Daily_Children[day] = cp.sum(Children)
-        Daily_P0[day] = p0
+        Daily_P0[day] = pr
         #print("Day= ",day, " MaxP_infection= ", cp.amax(P_infection), " Infected_Total= ", Infected_Total[day])
     if epidemic_print:
         Days=np.arange(day+1)
@@ -175,6 +215,17 @@ def csbn_epidemic(N, I0, q, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
         ax.plot(Days,Daily_P0[0:day+1].get())
         ax.set_title("Daily P0") 
         ax.set_xlabel("Days")
-        #plt.show()
-        fig.savefig("data/fig.pdf")
+        filename="data/epidemics{:03d}.pdf".format(netindx)
+        fig.savefig(filename)
         plt.close()
+    if(epidemic_save):
+        filename=open("data/epidemics-q-{:02d}.txt".format(int(100*q)),"a+")
+        #% day, Sum(Daily_Incidence), sum(Daily_Vaccinators)), sum(Daily_Suscep), sum(Recovered),  maxloc(dIncidence), 
+        # maxval(dIncidence), Daily_Vaccinators(day), minval(Daily_Vaccinators(1:day)), maxval(Daily_Vaccinators(1:day), NChildren
+        filename.writelines("{:4d}, {:6d}, {:6d}, {:4d}, {:6d}, {:5d}, {:6d}, {:6d}, {:6d}, {:6d}, {:6d} \n".format(
+            day+1, cp.sum(Daily_Incidence[0:day+1]).get(), cp.sum(Daily_Vaccinators[0:day+1]).get(), 
+            cp.sum(Daily_Suscep[0:day+1]).get(), cp.sum(Daily_Recovered[0:day+1]).get(), 
+            cp.argmax(Daily_Incidence[0:day+1]).get(), cp.amax(Daily_Incidence[0:day+1]).get(),
+            Daily_Vaccinators[day].get(), cp.amin(Daily_Vaccinators[0:day+1]).get(), 
+            cp.amax(Daily_Vaccinators[0:day+1]).get(), Daily_Children[day].get() ))
+        filename.close()
