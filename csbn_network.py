@@ -32,6 +32,7 @@ def csbn_network(network_func, N, Nsp_Children, Nsp_Parents, Plink, Padd, Pret, 
     Parents_mtx_indx=cp.zeros(Nsp_Parents, dtype=cp.int64)
     Parents_mtx_chunk=cp.zeros(NTchunk, dtype=cp.int32)
     grids=(math.ceil(NTchunk/blocksize_x),1,1) 
+    network_types = {"ern_cpmtx":ern_cpmtx, "trnGamma_cpmtx":trnGamma_cpmtx, "trnExp_cpmtx":trnExp_cpmtx} 
     
     for i in range(NTiter):  # going through the chunks i=0,1,...,NTiter-1
         #print("Iteration",i," out of",NTiter)
@@ -40,7 +41,7 @@ def csbn_network(network_func, N, Nsp_Children, Nsp_Parents, Plink, Padd, Pret, 
         NTshift=i*NTchunk # current starting index of the kernel 
         seed=int.from_bytes(os.urandom(4), 'big')  # get (new) random seed
 
-        network_func(grids, blocks, (NTchunk, NTshift, cp.float32(Plink),
+        network_types[network_func](grids, blocks, (NTchunk, NTshift, cp.float32(Plink),
                     cp.float32(Pret), cp.float32(Padd), cp.float32(lambdaTheta), seed,
                     Children, Children_mtx_chunk, Parents_mtx_chunk))
 
@@ -71,7 +72,7 @@ def csbn_network(network_func, N, Nsp_Children, Nsp_Parents, Plink, Padd, Pret, 
         NTshift=NTiterchunk 
         seed=int.from_bytes(os.urandom(4), 'big')  # get (new) random seed
         
-        network_func(grids, blocks, (chunk_remainder, NTshift, cp.float32(Plink),
+        network_types[network_func](grids, blocks, (chunk_remainder, NTshift, cp.float32(Plink),
                     cp.float32(Pret), cp.float32(Padd), cp.float32(lambdaTheta), seed,
                     Children, Children_mtx_chunk, Parents_mtx_chunk))
 
@@ -111,6 +112,7 @@ def csbn_network(network_func, N, Nsp_Children, Nsp_Parents, Plink, Padd, Pret, 
         CP = sparse.coo_matrix((cp.ones(int(N_mtx_Children), dtype=cp.float32), (Ic, Jc)), 
                                 shape=(N, N))
         csbn_network.CP = CP.tocsr()
+        #print(csbn_network.CP)
         sC= cp.ravel(sparse.spmatrix.sum(CP, axis=0)+cp.transpose(sparse.spmatrix.sum(CP, axis=1)))
         
         Jp = (cp.floor((1+cp.sqrt(8*Parents_mtx_indx[0:N_mtx_Parents]+1))/2)).astype(cp.int64)

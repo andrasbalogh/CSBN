@@ -56,34 +56,43 @@ Vaccinators_Separate = cp.RawKernel(r'''
 
 Pressure_Update = cp.RawKernel(r'''
      extern "C" __global__  
-     void Pressure_Update(const int NP, unsigned long int* Parents_mtx_indx, int* Vaccinator_yesnonever, int* Nbrvacc_yes, int* Nbrvacc_no ){
+     void Pressure_Update(const int NP, const unsigned long int* Parents_mtx_indx, const int* Vaccinator_yesnonever, 
+              float* Pq_yes, float* P1q_yes, float* Pq_no, float* P1q_no, const float* qij, const float* qji){
          unsigned long int i, j;
          int k = blockDim.x * blockIdx.x + threadIdx.x;
          if(k<NP){ 
             j=(int)floor(0.5*(1.0+sqrt(8.0*Parents_mtx_indx[k]+1.0)));
             i=(int)(Parents_mtx_indx[k]-(j-1)*j/2);   
-            if (Vaccinator_yesnonever[j]>0) { Nbrvacc_yes[i]++; }
-            else { Nbrvacc_no[i]++; }
-            if (Vaccinator_yesnonever[i]>0) {Nbrvacc_yes[j]++; }
-            else { Nbrvacc_no[j]++; }
+
+            if (Vaccinator_yesnonever[j]>0) { 
+              Pq_yes[i]=Pq_yes[i]*qji[k]; 
+              P1q_yes[i]=P1q_yes[i]*(1.0-qji[k]); 
+            } else { 
+              Pq_no[i]=Pq_no[i]*qji[k]; 
+              P1q_no[i]=P1q_no[i]*(1.0-qji[k]); 
+            }
+            if (Vaccinator_yesnonever[i]>0) { 
+              Pq_yes[j]=Pq_yes[j]*qij[k]; 
+              P1q_yes[j]=P1q_yes[j]*(1.0-qij[k]); 
+            } else { 
+              Pq_no[j]=Pq_no[j]*qij[k]; 
+              P1q_no[j]=P1q_no[j]*(1.0-qij[k]); 
+            }
          }
      }
      ''', 'Pressure_Update')
 
 pv_info_update = cp.RawKernel(r'''
      extern "C" __global__  
-     void pv_info_update(const int N, float* PV_info, float ps, float q, const int* Nbrvacc_yes, const int* Nbrvacc_no, const int* Vaccinator_yesnonever ){
+     void pv_info_update(const int N, float* PV_info, float pr, const int* Vaccinator_yesnonever, const float* Pq_yes, 
+            const float* P1q_yes, const float* Pq_no, const float* P1q_no ){
          int i = blockDim.x * blockIdx.x + threadIdx.x;
          if(i<N){ 
             if (Vaccinator_yesnonever[i]<0) {
                 PV_info[i] = 0.0;
             }
             else {
-                float pq_yes = powf(q,Nbrvacc_yes[i]);
-                float pMq_no = powf((1.0-q),Nbrvacc_no[i]);
-                float pMq_yes= powf((1.0-q),Nbrvacc_yes[i]);
-                float pq_no = powf(q,Nbrvacc_no[i]);
-                PV_info[i] = ps*pq_yes*pMq_no/(ps*pq_yes*pMq_no + (1.0-ps)*pMq_yes*pq_no);
+                PV_info[i] = pr*Pq_yes[i]*P1q_no[i]/(pr*Pq_yes[i]*P1q_no[i] + (1.0-pr)*P1q_yes[i]*Pq_no[i]);
             }
          }
      }

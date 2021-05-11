@@ -19,15 +19,15 @@ import time
 starttime = time.time()
 
 # Specifies what gpu to use
-cp.cuda.Device(7).use()
+cp.cuda.Device(0).use()
 
 # see csbn_cupy_notes.txt
-N = 1000
+N = 100
 Nsp_Children = 200000
-network_choice = "ban_cpmtx" 
-#network_choice = trnGamma_cpmtx
-#network_choice = ern_cpmtx
-#network_choice = trnExp_cpmtx
+network_choice = "ern_cpmtx"
+#network_choice = "ban_cpmtx" 
+#network_choice = "trnGamma_cpmtx"
+#network_choice = "trnExp_cpmtx"
 lambdaTheta = -40.0 # parameter for trn #-20
 Pc = 0.5  # 0.4 # Probability of having a child
 Mc = 7  # Maximum number of children in a family initially
@@ -122,6 +122,7 @@ for row in range(rowstart, rowend+1):
         csbn_network(network_choice, N, Nsp_Children, 6000, Plinkrow, 0, 0, 0, Pc, Mc, lambdaTheta,
                      blocksize_x, 3, network_save, network_print)
         CSP = csbn_network.CP.tocsr()
+        #print(CSP)
     t0 = time.time()
     print("Time to create network: ", (t0-t4))
     MaxNeighb = int(cp.amax(cp.ravel(sparse.spmatrix.sum(CSP, axis=0)

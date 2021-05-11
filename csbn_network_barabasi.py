@@ -5,7 +5,8 @@ import sys
 import os # needed for reading random seed form OS file /dev/random
 from kernels_network_barabasi import * # kernel functions (CUDA c++)
 
-def barabasifn (blocksize_x, N, Nsp_Children, Nsp_Parents, I0, Pc, Mc, Padd, Pret, netindx, network_save, network_print):
+def barabasifn (blocksize_x, N, Nsp_Children, Nsp_Parents, I0, Pc, Mc, Padd, Pret, netindx, network_save, 
+                network_print):
 
     N_mtx_Children = 0 # will store the actual number of connections
     N_mtx_Parents = 0 # will store the actual number of connections
@@ -94,12 +95,3 @@ def barabasifn (blocksize_x, N, Nsp_Children, Nsp_Parents, I0, Pc, Mc, Padd, Pre
         filename="data/network_diagnostics{:03d}.pdf".format(netindx)
         plt.savefig(filename)
         plt.close()
-
-    """plt.figure(2)
-    import networkx as nx
-    njc=Jc.get(); nic=Ic.get()
-    G = nx.Graph()
-    for i in range(N_mtx_Children):
-        G.add_edge(nic[i], njc[i])
-    nx.draw(G, with_labels=True) 
-    plt.show()""" 
