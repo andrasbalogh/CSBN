@@ -53,10 +53,10 @@ shape = 11;  ip=16; # Measles
 
 # note that the epidemic part always tries to read network that was previously saved into file! 
 # once the files are generated there is no need to run network generation again
-network_run=0 # run (1) or not run (0) the network generation
+network_run=1 # run (1) or not run (0) the network generation
 network_save=1 # save (1) or not save (0) generated network into file data/csbn_network....npz
 network_print=1 # network histogram: save (1) or not save (0) into file data/network_diagnostics003.pdf
 
-epidemic_run=1 # run (1) or not run (0) the epidemic on the network
+epidemic_run=0 # run (1) or not run (0) the epidemic on the network
 epidemic_save=1 # saving epidemics data for using it in qstat.py
 epidemic_print=1 # save plots of epidemics statistics into epidemcs....pdf
