@@ -19,12 +19,12 @@ StartCurrent=1
 EndCurrent=StartCurrent
 for i in range(runremainder):
     EndCurrent=StartCurrent+runpergpu
-    runstr=runstr+'export CUDA_VISIBLE_DEVICES="{:1d}"; python3 csbn_gpus.py {:3d} {:3d} & '.format(i, StartCurrent, EndCurrent)
+    runstr=runstr+'export CUDA_VISIBLE_DEVICES="{:1d}"; python3 csbn.py {:3d} {:3d} & '.format(i, StartCurrent, EndCurrent)
     StartCurrent=StartCurrent+runpergpu+1
 if NEnd_netindx-NStart_netindx+1>gpuNum:
     for i in range(runremainder,gpuNum):
         EndCurrent=StartCurrent+runpergpu-1
-        runstr=runstr+'export CUDA_VISIBLE_DEVICES="{:1d}"; python3 csbn_gpus.py {:3d} {:3d} & '.format(i, StartCurrent, EndCurrent)
+        runstr=runstr+'export CUDA_VISIBLE_DEVICES="{:1d}"; python3 csbn.py {:3d} {:3d} & '.format(i, StartCurrent, EndCurrent)
         StartCurrent=StartCurrent+runpergpu
 
 
