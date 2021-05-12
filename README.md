@@ -8,7 +8,12 @@
 * CuPy: https://docs.cupy.dev/en/stable/install.html 
 
 ### Files ###
-* csbn.py main file
-  * csbn_network.py => kernels_network.py
-  * csbn_epidemic.py => kernels_epidemic.py
-* R0.py => kernels_R0.py, R0-params.csv
+* parameters.py parameter file
+* csbn_run.py main file to run, distributes the work over several GPUs
+  * csbn_gpus.py  calls network generation and epidemic runs in loops  
+    * csbn_network.py => kernels_network.py, kernels_trn_network.py, kernels_gamma_network.py
+    * csbn_network_barabasi.py => kernels_network_barabasi.py
+    * csbn_epidemic.py => kernels_epidemic.py
+* qstat.py  analyzis of dependence on q 
+* network_check.py   network statistics (works only for N=100 or smaller)
+* R0.py => kernels_R0.py, R0-params.csv Uses its own parameters instead of parameters.py
