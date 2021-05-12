@@ -7,9 +7,9 @@ from csbn_epidemic import *  # epidemic part
 from parameters import *  # parameter file
 from scipy import stats
 
-import time
+#import time
 #starttime = time.time()
-cp.cuda.Device(gpuNum).use()  # GPU used
+#cp.cuda.Device(gpuNum).use()  # GPU used
 
 blocksize_x = 1024 # maximum size of 1D block is 1024 threads
 

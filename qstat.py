@@ -1,12 +1,13 @@
 import numpy as np
 from csv import reader
 import matplotlib.pyplot as plt
+from parameters import *  # parameter file
 
-qmin=0.1; qmax=0.9; dq=0.1
 qx=np.arange(qmin,qmax+dq,dq,dtype=float)
 Nq=qx.size
 qn=np.arange(0,Nq,1,dtype=int)
-Nr=10; # number of rows 
+Nr=NEnd_netindx-NStart_netindx+1 # number of rows in the files data/epidemcs-q-...txt
+
 Ncol=11 # number of columns
 # lastday, Sum(Daily_Incidence), sum(Daily_Vaccinators)), sum(Daily_Suscep), sum(Recovered),  maxloc(dIncidence), 
 # maxval(dIncidence), Daily_Vaccinators(day), minval(Daily_Vaccinators(1:day)), maxval(Daily_Vaccinators(1:day), NChildren
@@ -56,6 +57,6 @@ for id in range(0,10):
     ax1.legend(labels, loc='best')
     plt.xlabel('q',fontfamily='Times'); plt.ylabel(namelabel[id],fontfamily='Times');
     plt.savefig(filename[id])
-    plt.close()
-    #plt.show()
-#print(stats[3,1,:].shape)
+    plt.close()  
+
+ 
