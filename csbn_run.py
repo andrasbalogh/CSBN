@@ -15,10 +15,12 @@ runpergpu=(NEnd_netindx-NStart_netindx+1)//gpuNum
 runremainder= NEnd_netindx-NStart_netindx+1-runpergpu*gpuNum
 runstr=''
 
-StartCurrent=1
+StartCurrent=NStart_netindx
 EndCurrent=StartCurrent
 for i in range(runremainder):
     EndCurrent=StartCurrent+runpergpu
+    # assemble the command line call in the format
+    # export CUDA_VISIBLE_DEVICES="i";  python csbn.py startindex endindex
     runstr=runstr+'export CUDA_VISIBLE_DEVICES="{:1d}"; python3 csbn.py {:3d} {:3d} & '.format(i, StartCurrent, EndCurrent)
     StartCurrent=StartCurrent+runpergpu+1
 if NEnd_netindx-NStart_netindx+1>gpuNum:
@@ -27,8 +29,7 @@ if NEnd_netindx-NStart_netindx+1>gpuNum:
         runstr=runstr+'export CUDA_VISIBLE_DEVICES="{:1d}"; python3 csbn.py {:3d} {:3d} & '.format(i, StartCurrent, EndCurrent)
         StartCurrent=StartCurrent+runpergpu
 
-
-
+#start the running the processes as subprocesses in shell on different GPU
 subprocess.run(runstr, shell=True)
 
 
