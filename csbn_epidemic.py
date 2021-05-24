@@ -14,18 +14,26 @@ def csbn_epidemic(N, I0, q, qeps, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
         #         network_histogram, 
     # Reading network data of children and parents
     filename="data/csbn_network{:03d}.npz".format(netindx)
-    data=np.load(filename)
+    try:
+        data=np.load(filename)
+    except:
+        print("Error, file", filename, " is missing! Make sure to ran the code with network_run=1")
+        sys.exit()
     Ntemp=np.asscalar(data['N'])    # Number of households
-    if(Ntemp!=N): sys.exit(["Error, N=",N," specified does not match N=",
-                           Ntemp, " from data file!"])
+    if(Ntemp!=N): 
+        print("Error, N=",N," specified does not match N=",
+                           Ntemp, " from data file!")
+        sys.exit()
     NC=np.asscalar(data['NC'])  # Number of children connections, length of Children_mtx_indx
     NP=np.asscalar(data['NP'])  # Number of parent connections, length of Parents_mtx_indx
     Plink=np.asscalar(data['Plink']) # Probability that there is a connection between children's households
     Pret=np.asscalar(data['Pret'])   # Probability of parents retaining children's connections
     Padd=np.asscalar(data['Padd'])   # Probability of parents adding connections if the children don't have one
     I0temp=np.asscalar(data['I0'])    # Initial number of infected children
-    if(I0temp!=I0): sys.exit("Error, I0=",I0," specified does not match I0=",
+    if(I0temp!=I0): 
+        print("Error, I0=",I0," specified does not match I0=",
                            I0temp, " from data file!")
+        sys.exit()
     Children_mtx_indx=cp.asarray(data['Children_mtx_indx'],dtype=cp.int64) # Length=NC, int64 is required because the indexing of the upper triangular entries goes from 0 to (N-1)*(N-2)/2
     Parents_mtx_indx=cp.asarray(data['Parents_mtx_indx'],dtype=cp.int64)   # Length=NP
     AllInfected=cp.asarray(data['Infected'],dtype=cp.int32)     # Total number of infected children in each household, Length=N, the standard size of integers is 32 bits. Decreasing the int size could complicate the code but could reduce the storage requirements.
@@ -33,36 +41,21 @@ def csbn_epidemic(N, I0, q, qeps, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
     Children=cp.add(AllInfected,Susceptible)  # Total number of children. Later newborns are added
 
     if(q-qeps<0 or q+qeps>1):
-        sys.exit("Error! (q-qeps,q+qeps)=(%5.3f,%5.3f) is not in the [0,1] range!"% (q-qeps, q+qeps))
+        print("Error! (q-qeps,q+qeps)=(%5.3f,%5.3f) is not in the [0,1] range!"% (q-qeps, q+qeps))
+        sys.exit()
 
     if qeps==0.0:
         qij=q*cp.ones(NP, dtype=cp.float32)
         qji=q*cp.ones(NP, dtype=cp.float32)
     else:
-        qij=cp.random.uniform(low=q-qeps, high=q+qeps, size=NP)
-        qji=cp.random.uniform(low=q-qeps, high=q+qeps, size=NP)
+        qij=cp.random.uniform(low=q-qeps, high=q+qeps, size=NP, dtype=cp.float32)
+        qji=cp.random.uniform(low=q-qeps, high=q+qeps, size=NP, dtype=cp.float32)
     
     Pq_yes=cp.ones(N, dtype=cp.float32)
     P1q_yes=cp.ones(N, dtype=cp.float32)
     Pq_no=cp.ones(N, dtype=cp.float32)
     P1q_no=cp.ones(N, dtype=cp.float32)
     
-    '''Jp = (cp.floor((1+cp.sqrt(8*Parents_mtx_indx+1))/2)).astype(cp.int64)
-    Ip = (Parents_mtx_indx - ((Jp*(Jp-1))/2)).astype(cp.int64)
-    # upper triangular part
-    PP = sparse.coo_matrix((cp.ones(int(NP), dtype=cp.float32), (Ip, Jp)), shape=(N, N))
-    Psp=PP.tocsr()
-    MaxNeighb = int(cp.amax(cp.ravel(sparse.spmatrix.sum(Psp, axis=0) + cp.transpose(sparse.spmatrix.sum(Psp, axis=1)))))
-    #print(MaxNeighb)
-    nneighbs = cp.zeros((N), dtype=cp.int32)
-    neighbs = cp.zeros((N, MaxNeighb), dtype=cp.int32)
-    for i in range(N):
-        neighbs_temp = cp.concatenate((Psp.getcol(i).tocsc().indices, Psp.getrow(i).indices))
-        nneighbs[i] = neighbs_temp.size
-        neighbs[i, 0:nneighbs[i]] = neighbs_temp
-    #print(neighbs)
-    #print(nneighbs)'''
-
     Infected=cp.zeros((N,ip),dtype=cp.int32)    
     Pregnancy=cp.zeros(N, dtype=cp.int32)               # Days of pregnancy in each household[0,gestation]
     Vaccinator_yesnonever=cp.zeros(N, dtype=cp.int32)   # Household vaccination: -1 = never, 0 = no, 1 = yes, 0/1 can change
@@ -118,8 +111,9 @@ def csbn_epidemic(N, I0, q, qeps, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
     Daily_P0[day] = 1.0/(1.0+np.exp(ggamma*np.asscalar(cp.sum(Adverse).get())-aalpha*np.asscalar(cp.sum(Infected_Total).get())))
     while (Infected_Total[day].get() > 0):
         day = day + 1
-        if (day>=MaxDays): sys.exit("Error, must increase MaxDays!")
-    
+        if (day>=MaxDays): 
+            print("Error, must increase MaxDays!")
+            sys.exit()
         # Converts Vacc_yesnonever=-1,0 into Nbrvacc_yes=0 &  Nbrvacc_no=1
         # Converts Vacc_yesnonever=+1 into Nbrvacc_yes=1 &  Nbrvacc_no=0
         grids=(math.ceil(N/blocksize_x),1,1) # set grid size N
@@ -215,11 +209,11 @@ def csbn_epidemic(N, I0, q, qeps, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
         ax.plot(Days,Daily_P0[0:day+1].get())
         ax.set_title("Daily P0") 
         ax.set_xlabel("Days")
-        filename="data/epidemics{:03d}.pdf".format(netindx)
+        filename="data/epidemic{:03d}.pdf".format(netindx)
         fig.savefig(filename)
         plt.close()
     if(epidemic_save):
-        filename=open("data/epidemics-q-{:02d}.txt".format(int(100*q)),"a+")
+        filename=open("data/epidemic-q-{:02d}.txt".format(int(100*q)),"a+")
         #% day, Sum(Daily_Incidence), sum(Daily_Vaccinators)), sum(Daily_Suscep), sum(Recovered),  maxloc(dIncidence), 
         # maxval(dIncidence), Daily_Vaccinators(day), minval(Daily_Vaccinators(1:day)), maxval(Daily_Vaccinators(1:day), NChildren
         filename.writelines("{:4d}, {:6d}, {:6d}, {:4d}, {:6d}, {:5d}, {:6d}, {:6d}, {:6d}, {:6d}, {:6d} \n".format(
