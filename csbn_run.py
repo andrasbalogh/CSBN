@@ -26,14 +26,13 @@ runremainder= netindx_end-netindx_start+1-runpergpu*gpuNum
 if __name__ == '__main__':
     StartCurrent=netindx_start
     EndCurrent=StartCurrent
-    for GPUnum in range(runremainder):
+    for GPUindx in range(runremainder):
         EndCurrent=StartCurrent+runpergpu
-        Process(target=fcsbn,args=(GPUnum,StartCurrent, EndCurrent,)).start()
+        Process(target=fcsbn,args=(GPUindx,StartCurrent, EndCurrent,)).start()
         StartCurrent=StartCurrent+runpergpu+1
-    if netindx_end-netindx_start+1>gpuNum:
-        for GPUnum in range(runremainder,gpuNum):
-            EndCurrent=StartCurrent+runpergpu-1
-            Process(target=fcsbn,args=(GPUnum,StartCurrent, EndCurrent,)).start()
-            StartCurrent=StartCurrent+runpergpu
+    for GPUindx in range(runremainder,gpuNum):
+        EndCurrent=StartCurrent+runpergpu-1
+        Process(target=fcsbn,args=(GPUindx,StartCurrent, EndCurrent,)).start()
+        StartCurrent=StartCurrent+runpergpu
 
 
