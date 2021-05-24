@@ -49,7 +49,8 @@ def csbn_network(network_func, N, Nsp_Children, Nsp_Parents, Plink, Padd, Pret, 
         if (nzc>0):  # Children's connection matrix
             N_mtx_Children=N_mtx_Children+nzc
             if (N_mtx_Children>Nsp_Children):
-                sys.exit("Error, must increase Nsp_Children!")
+                print("Error, must increase Nsp_Children!")
+                sys.exit()
             cp.put(Children_mtx_indx, cp.arange(N_mtx_Children-nzc,
                                                 stop=N_mtx_Children, step=1,
                                                 dtype=cp.int64),
@@ -58,7 +59,8 @@ def csbn_network(network_func, N, Nsp_Children, Nsp_Parents, Plink, Padd, Pret, 
         if (nzp>0):   # Parents' connection matrix
             N_mtx_Parents=N_mtx_Parents + nzp
             if (N_mtx_Parents>Nsp_Parents):
-                sys.exit("Error, must increase Nsp_Parents!")
+                print("Error, must increase Nsp_Parents!")
+                sys.exit()
             cp.put(Parents_mtx_indx, cp.arange(N_mtx_Parents-nzp,
                                             stop=N_mtx_Parents, step=1,
                                             dtype=cp.int64),
@@ -81,7 +83,8 @@ def csbn_network(network_func, N, Nsp_Children, Nsp_Parents, Plink, Padd, Pret, 
         if (nzc>0):
             N_mtx_Children=N_mtx_Children+nzc
             if (N_mtx_Children>Nsp_Children):
-                sys.exit("Error, must increase Nsp_Children")
+                print("Error, must increase Nsp_Children")
+                sys.exit()
             cp.put(Children_mtx_indx, cp.arange(N_mtx_Children-nzc,
                                                 stop=N_mtx_Children, step=1,
                                                 dtype=cp.int64),
@@ -90,7 +93,8 @@ def csbn_network(network_func, N, Nsp_Children, Nsp_Parents, Plink, Padd, Pret, 
         if (nzp>0):
             N_mtx_Parents=N_mtx_Parents+nzp 
             if (N_mtx_Parents>Nsp_Parents):
-                sys.exit("Error, must increase Nsp_Parents")
+                print("Error, must increase Nsp_Parents")
+                sys.exit()
             cp.put(Parents_mtx_indx, cp.arange(N_mtx_Parents-nzp,
                                             stop=N_mtx_Parents, step=1,
                                             dtype=cp.int64),
