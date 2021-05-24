@@ -1,35 +1,39 @@
-#Distributes the work over several GPUs
-import subprocess
-import numpy as np
-from parameters import *  # parameter file
+from multiprocessing import Process, Lock
 import os
 import sys
+import glob
+from parameters import *  # parameter file
+from fcsbn import *
 
-if epidemic_run*epidemic_save>0: # delete previous results
-    for q in np.arange(qmin, qmax+dq, dq, dtype=float):
-        filename="data/epidemics-q-{:02d}.txt".format(int(100*q))
-        if os.path.exists(filename):
-            os.remove(filename)
+# create data directory if it does not exist
+if not os.path.exists('data'):
+    os.makedirs('data')
 
-runpergpu=(NEnd_netindx-NStart_netindx+1)//gpuNum
-runremainder= NEnd_netindx-NStart_netindx+1-runpergpu*gpuNum
-runstr=''
+# Have to delete previous files because results are added to the files line-by-line
+if epidemic_run*epidemic_save>0: 
+    # Get a list of all the files 
+    fileList = glob.glob('data/epidemics-q-*.txt')
+    # Iterate over the list of filepaths & remove each file.
+    for filePath in fileList:
+        try:
+            os.remove(filePath)
+        except:
+            print("Error while deleting file : ", filePath)
 
-StartCurrent=NStart_netindx
-EndCurrent=StartCurrent
-for i in range(runremainder):
-    EndCurrent=StartCurrent+runpergpu
-    # assemble the command line call in the format
-    # export CUDA_VISIBLE_DEVICES="i";  python csbn.py startindex endindex
-    runstr=runstr+'export CUDA_VISIBLE_DEVICES="{:1d}"; python3 csbn.py {:3d} {:3d} & '.format(i, StartCurrent, EndCurrent)
-    StartCurrent=StartCurrent+runpergpu+1
-if NEnd_netindx-NStart_netindx+1>gpuNum:
-    for i in range(runremainder,gpuNum):
-        EndCurrent=StartCurrent+runpergpu-1
-        runstr=runstr+'export CUDA_VISIBLE_DEVICES="{:1d}"; python3 csbn.py {:3d} {:3d} & '.format(i, StartCurrent, EndCurrent)
-        StartCurrent=StartCurrent+runpergpu
+runpergpu=(netindx_end-netindx_start+1)//gpuNum
+runremainder= netindx_end-netindx_start+1-runpergpu*gpuNum            
 
-#start the running the processes as subprocesses in shell on different GPU
-subprocess.run(runstr, shell=True)
+if __name__ == '__main__':
+    StartCurrent=netindx_start
+    EndCurrent=StartCurrent
+    for GPUnum in range(runremainder):
+        EndCurrent=StartCurrent+runpergpu
+        Process(target=fcsbn,args=(GPUnum,StartCurrent, EndCurrent,)).start()
+        StartCurrent=StartCurrent+runpergpu+1
+    if netindx_end-netindx_start+1>gpuNum:
+        for GPUnum in range(runremainder,gpuNum):
+            EndCurrent=StartCurrent+runpergpu-1
+            Process(target=fcsbn,args=(GPUnum,StartCurrent, EndCurrent,)).start()
+            StartCurrent=StartCurrent+runpergpu
 
 
