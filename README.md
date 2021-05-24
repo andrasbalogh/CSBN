@@ -10,7 +10,7 @@
 ### Files ###
 * parameters.py parameter file
 * csbn_run.py main file to run, distributes the work over several GPUs
-  * csbn.py  calls network generation and epidemic runs in loops  
+  * fcsbn.py  calls network generation and epidemic runs in loops  
     * csbn_network.py => kernels_network.py, kernels_trn_network.py, kernels_gamma_network.py
     * csbn_network_barabasi.py => kernels_network_barabasi.py
     * csbn_epidemic.py => kernels_epidemic.py
