@@ -19,8 +19,8 @@ Padd=0.0004;  # parents' network probability of adding a connection if children 
 Pret=0.6    # parents' network probability of retaining children's connection
 
 # The code can generate several random networks saved in file data/csbn_network....npz
-NStart_netindx=1 # starting index of network to generate
-NEnd_netindx=10   # end index of network to generate
+netindx_start=1 # starting index of network to generate
+netindx_end=10   # end index of network to generate
 
 I0=10 # Number of infected children
 
@@ -34,6 +34,8 @@ qmin = 0.1 # q - Probability of households' signal matching their vaccination op
 qmax = 0.9 # endpoint included!!!
 dq = 0.1
 qeps=0.05        # (q-qeps, q+qeps) interval to generate random qij, qji 
+# Repeat q's for social learning 
+NQ=1
 
 rho=0.01        # Probability of vaccination access, Vaccinate_Susceptibles
 Padv=0.01       # Probability of adverse effect from vaccine, Vaccinate_Susceptibles
@@ -60,3 +62,6 @@ network_print=1 # network histogram: save (1) or not save (0) into file data/net
 epidemic_run=0 # run (1) or not run (0) the epidemic on the network
 epidemic_save=1 # saving epidemics data for using it in qstat.py
 epidemic_print=1 # save plots of epidemics statistics into epidemcs....pdf
+
+# Do not change it unless you know what you are doing
+blocksize_x = 1024 
