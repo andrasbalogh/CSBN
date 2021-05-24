@@ -1,6 +1,6 @@
 # This is the "parameters" file. 
 
-gpuNum=8   # number of GPUs to distribute the work over
+gpuNum=8   # number of GPUs to distribute the work over. numbered as 0, 1, ..., gpuNum-1
 
 # Comment out the desired network
 network_type = "ern_cpmtx" 
