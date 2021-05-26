@@ -16,7 +16,7 @@
     * csbn_epidemic.py => kernels_epidemic.py
 * qstat.py  analyzis of dependence on q 
 * network_check.py   network statistics (works only for N=100 or smaller)
-* R0.py => kernels_R0.py, R0-params.csv Uses its own parameters instead of parameters.py
+* R0_run.py => fR0.py, kernels_R0.py, R0-params.csv Uses its own parameters instead of parameters.py
 ### Running the code (short version)###
 * Edit the parameters.py file, set network_run=1, network_save=1, epidemic_run=0 
 * Run csbn_run.py to generate only network
@@ -24,6 +24,10 @@
 * Edit the parameters.py file, set set network_run=0, epidemic_run=1, epidemic_save=1 
 * Run csbn_run.py to generate epidemics results
 * Run qstat.py to generate analyzis of dependence on q values
+* For calculating R0
+  * Edit R0-params.csv
+  * Edit the parameters in the file R0_run.py
+  * Run the code R0_run.py
 
 ### Running the code (longer version)###
 * First networks are generated and saved in files data/csbn_network....npz, histogram "printed" in data/network_diagnostics....pdf 
