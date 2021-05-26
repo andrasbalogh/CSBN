@@ -6,7 +6,7 @@ from fR0 import *
 ###################################################
 
 ######## parameters ##################
-Ngpu=1   # number of GPUs to distribute the processing of rows from R0-params.csv
+Ngpu=8   # number of GPUs to distribute the processing of rows from R0-params.csv
 
 N = 100000  # number of households
 Nsp_Children = 20000000    # estimated upper bound for the storage of the children's network 
