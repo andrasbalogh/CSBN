@@ -12,7 +12,7 @@ if not os.path.exists('data'):
 # Have to delete previous files because results are added to the files line-by-line
 if epidemic_run*epidemic_save>0: 
     # Get a list of all the files 
-    fileList = glob.glob('data/epidemics-q-*.txt')
+    fileList = glob.glob('data/epidemic-q-*.txt')
     # Iterate over the list of filepaths & remove each file.
     for filePath in fileList:
         try:
