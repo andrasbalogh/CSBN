@@ -30,9 +30,10 @@ if __name__ == '__main__':
         EndCurrent=StartCurrent+runpergpu
         Process(target=fcsbn,args=(GPUindx,StartCurrent, EndCurrent,)).start()
         StartCurrent=StartCurrent+runpergpu+1
-    for GPUindx in range(runremainder,gpuNum):
-        EndCurrent=StartCurrent+runpergpu-1
-        Process(target=fcsbn,args=(GPUindx,StartCurrent, EndCurrent,)).start()
-        StartCurrent=StartCurrent+runpergpu
+    if runpergpu>0:
+        for GPUindx in range(runremainder,gpuNum):
+            EndCurrent=StartCurrent+runpergpu-1
+            Process(target=fcsbn,args=(GPUindx,StartCurrent, EndCurrent,)).start()
+            StartCurrent=StartCurrent+runpergpu
 
 
