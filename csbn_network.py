@@ -136,5 +136,3 @@ def csbn_network(network_func, N, Nsp_Children, Nsp_Parents, Plink, Padd, Pret, 
         filename="data/network_diagnostics{:03d}.pdf".format(netindx)
         plt.savefig(filename)
         plt.close()
-
-
