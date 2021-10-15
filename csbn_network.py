@@ -7,7 +7,6 @@ import sys  # for sys.exit(0)
 from kernels_network import * # kernel functions (CUDA c++)
 from kernels_trn_network import * 
 from kernels_gamma_network import *
-#from kernel_functions_epidemic import * # kernel functions (CUDA c++)
 import math # for ceiling function
 
 def csbn_network(network_func, N, Nsp_Children, Nsp_Parents, Plink, Padd, Pret, I0, Pc, Mc, lambdaTheta,
@@ -99,34 +98,35 @@ def csbn_network(network_func, N, Nsp_Children, Nsp_Parents, Plink, Padd, Pret, 
                                             stop=N_mtx_Parents, step=1,
                                             dtype=cp.int64),
                 cp.add(cp.flatnonzero(Parents_mtx_chunk),NTshift))
+
+    # calculate households' social connections
+    from cupyx.scipy import sparse
+    import matplotlib.pyplot as plt
+    Jp = (cp.floor((1+cp.sqrt(8*Parents_mtx_indx[0:N_mtx_Parents]+1))/2)).astype(cp.int64)
+    Ip = (Parents_mtx_indx[0:N_mtx_Parents] - ((Jp*(Jp-1))/2)).astype(cp.int64)
+    # upper triangular part
+    PP = sparse.coo_matrix((cp.ones(int(N_mtx_Parents), dtype=cp.float32), (Ip, Jp)), shape=(N, N))
+    nS= cp.ravel(sparse.spmatrix.sum(PP, axis=0)+cp.transpose(sparse.spmatrix.sum(PP, axis=1)))
+
     if network_save:
         filename="data/csbn_network{:03d}".format(netindx)
         np.savez(filename, I0=I0, Infected=All_Infected.get(), N=N,
                 Susceptible=Susceptible.get(), NC=N_mtx_Children,
                 Children_mtx_indx=Children_mtx_indx[0:N_mtx_Children].get(),
-                NP=N_mtx_Parents,
+                NP=N_mtx_Parents, nS=nS.get(),
                 Parents_mtx_indx=Parents_mtx_indx[0:N_mtx_Parents].get(),
                 Plink=Plink, Pret=Pret, Padd=Padd)
     if network_print:
-        from cupyx.scipy import sparse
-        import matplotlib.pyplot as plt
         Jc = (cp.floor((1+cp.sqrt(8*Children_mtx_indx[0:N_mtx_Children]+1))/2)).astype(cp.int64)
         Ic = (Children_mtx_indx[0:N_mtx_Children] - ((Jc*(Jc-1))/2)).astype(cp.int64)
         # upper triangular part
         CP = sparse.coo_matrix((cp.ones(int(N_mtx_Children), dtype=cp.float32), (Ic, Jc)), 
                                 shape=(N, N))
-        sC= cp.ravel(sparse.spmatrix.sum(CP, axis=0)+cp.transpose(sparse.spmatrix.sum(CP, axis=1)))
+        nB= cp.ravel(sparse.spmatrix.sum(CP, axis=0)+cp.transpose(sparse.spmatrix.sum(CP, axis=1)))
         
-        Jp = (cp.floor((1+cp.sqrt(8*Parents_mtx_indx[0:N_mtx_Parents]+1))/2)).astype(cp.int64)
-        Ip = (Parents_mtx_indx[0:N_mtx_Parents] - ((Jp*(Jp-1))/2)).astype(cp.int64)
-        # upper triangular part
-        PP = sparse.coo_matrix((cp.ones(int(N_mtx_Parents), dtype=cp.float32), (Ip, Jp)), 
-                                shape=(N, N))
-        sP= cp.ravel(sparse.spmatrix.sum(PP, axis=0)+cp.transpose(sparse.spmatrix.sum(PP, axis=1)))
-        
-        M=int(max(cp.amax(sC),np.amax(sP)))+1
+        M=int(max(cp.amax(nB),np.amax(nS)))+1
         C_P_hist = plt.figure(1)
-        plt.hist([sC.get(),sP.get()], bins=range(M+1), align='left',rwidth=0.9, label=["Children", "Parents"])
+        plt.hist([nB.get(),nS.get()], bins=range(M+1), align='left',rwidth=0.9, label=["Children", "Parents"])
         plt.xlabel('Number of connections',fontsize=15)
         plt.ylabel('Frequency',fontsize=15)
         plt.grid(True)
