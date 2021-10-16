@@ -106,7 +106,7 @@ def csbn_network(network_func, N, Nsp_Children, Nsp_Parents, Plink, Padd, Pret, 
     Ip = (Parents_mtx_indx[0:N_mtx_Parents] - ((Jp*(Jp-1))/2)).astype(cp.int64)
     # upper triangular part
     PP = sparse.coo_matrix((cp.ones(int(N_mtx_Parents), dtype=cp.float32), (Ip, Jp)), shape=(N, N))
-    nS= cp.ravel(sparse.spmatrix.sum(PP, axis=0)+cp.transpose(sparse.spmatrix.sum(PP, axis=1)))
+    nS= (cp.ravel(sparse.spmatrix.sum(PP, axis=0)+cp.transpose(sparse.spmatrix.sum(PP, axis=1)))).astype(cp.int32)
 
     if network_save:
         filename="data/csbn_network{:03d}".format(netindx)
