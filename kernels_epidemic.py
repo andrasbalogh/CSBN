@@ -37,23 +37,6 @@ Vaccinators_Init = cp.RawKernel(r'''
      }
      ''', 'Vaccinators_Init', backend='nvcc')
 
-Vaccinators_Separate = cp.RawKernel(r'''
-     extern "C" __global__  
-     void Vaccinators_Separate(const int N, int* Vaccinator_yesnonever, int* Nbrvacc_yes, int* Nbrvacc_no ){
-         int i = blockDim.x * blockIdx.x + threadIdx.x;
-         if(i<N){ 
-            if (Vaccinator_yesnonever[i]>0) {
-                Nbrvacc_yes[i]=1;
-                Nbrvacc_no[i]=0;
-            }
-            else {
-                Nbrvacc_yes[i]=0;
-                Nbrvacc_no[i]=1;
-            }
-         }
-     }
-     ''', 'Vaccinators_Separate')
-
 Pressure_Update = cp.RawKernel(r'''
      extern "C" __global__  
      void Pressure_Update(const int NP, const unsigned long int* Parents_mtx_indx, const int* Vaccinator_yesnonever, 
@@ -97,6 +80,33 @@ pv_info_update = cp.RawKernel(r'''
          }
      }
      ''', 'pv_info_update')
+
+nV_Update = cp.RawKernel(r'''
+     extern "C" __global__  
+     void nV_Update(const int NP, const unsigned long int* Parents_mtx_indx, const int* Vaccinator_yesnonever, 
+              int *nV){
+         unsigned long int i, j;
+         int k = blockDim.x * blockIdx.x + threadIdx.x;
+         if(k<NP){ 
+            j=(int)floor(0.5*(1.0+sqrt(8.0*Parents_mtx_indx[k]+1.0)));
+            i=(int)(Parents_mtx_indx[k]-(j-1)*j/2);   
+            if (Vaccinator_yesnonever[j]<=0) { nV[i]=nV[i]+1;  }
+            if (Vaccinator_yesnonever[i]<=0) { nV[j]=nV[j]+1;  }
+         }
+     }
+     ''', 'nV_Update')
+
+pv_delta_update = cp.RawKernel(r'''   
+     extern "C" __global__  
+     void pv_delta_update(const int N, float* PV_info, const float delta, const float pi, const float pr,
+                          const int* nV, const int* nS ){
+         int i = blockDim.x * blockIdx.x + threadIdx.x;
+         if(i<N){ 
+            if (nS[i]>0) {  PV_info[i] = 1.0/(1.0+exp(delta*(1.0-2.0*nV[i]/nS[i])-pi)); }
+            else { PV_info[i] = pr;}
+         }
+     }
+     ''', 'pv_delta_update')
 
 Vaccinator_update = cp.RawKernel(r'''
      #include<curand_kernel.h>
