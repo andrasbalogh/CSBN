@@ -30,7 +30,7 @@ def fcsbn(GPUnum, NStart_netindx, NEnd_netindx):
                     for qind in range(NQ):
                         csbn_epidemic(N, I0, q, qeps, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
                               Peff, ssigma, gestation, MaxDays, ip, blocksize_x, netindx,
-                                Pincubtrans, epidemic_save, epidemic_print)
+                                Pincubtrans, delta, epidemic_save, epidemic_print)
 
         print('GPU {:1d} is finished for networks {:2d}-{:2d}'.format(GPUnum, NStart_netindx, NEnd_netindx))
     except:
