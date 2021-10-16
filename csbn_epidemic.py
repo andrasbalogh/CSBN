@@ -9,9 +9,7 @@ from cupyx.scipy import sparse
 
 def csbn_epidemic(N, I0, q, qeps, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
                   Peff, ssigma, gestation, MaxDays, ip, blocksize_x, netindx,
-                  Pincubtrans, epidemic_save, epidemic_print):
-        #N, Nsp_Children, Nsp_Parents, Plink, Padd, Pret, I0, Pc, Mc,
-        #         network_histogram, 
+                  Pincubtrans, delta, epidemic_save, epidemic_print):
     # Reading network data of children and parents
     filename="data/csbn_network{:03d}.npz".format(netindx)
     try:
@@ -31,15 +29,15 @@ def csbn_epidemic(N, I0, q, qeps, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
     Padd=np.asscalar(data['Padd'])   # Probability of parents adding connections if the children don't have one
     I0temp=np.asscalar(data['I0'])    # Initial number of infected children
     if(I0temp!=I0): 
-        print("Error, I0=",I0," specified does not match I0=",
-                           I0temp, " from data file!")
+        print("Error, I0=",I0," specified does not match I0=",I0temp, " from data file!")
         sys.exit()
     Children_mtx_indx=cp.asarray(data['Children_mtx_indx'],dtype=cp.int64) # Length=NC, int64 is required because the indexing of the upper triangular entries goes from 0 to (N-1)*(N-2)/2
     Parents_mtx_indx=cp.asarray(data['Parents_mtx_indx'],dtype=cp.int64)   # Length=NP
     AllInfected=cp.asarray(data['Infected'],dtype=cp.int32)     # Total number of infected children in each household, Length=N, the standard size of integers is 32 bits. Decreasing the int size could complicate the code but could reduce the storage requirements.
     Susceptible=cp.asarray(data['Susceptible'],dtype=cp.int32)  # Total number of susceptible children in each household, Length=N    
     Children=cp.add(AllInfected,Susceptible)  # Total number of children. Later newborns are added
-
+    nS=cp.asarray(data['nS'],dtype=cp.int32)
+    
     if(q-qeps<0 or q+qeps>1):
         print("Error! (q-qeps,q+qeps)=(%5.3f,%5.3f) is not in the [0,1] range!"% (q-qeps, q+qeps))
         sys.exit()
@@ -59,8 +57,6 @@ def csbn_epidemic(N, I0, q, qeps, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
     Infected=cp.zeros((N,ip),dtype=cp.int32)    
     Pregnancy=cp.zeros(N, dtype=cp.int32)               # Days of pregnancy in each household[0,gestation]
     Vaccinator_yesnonever=cp.zeros(N, dtype=cp.int32)   # Household vaccination: -1 = never, 0 = no, 1 = yes, 0/1 can change
-    Nbrvacc_yes=cp.zeros(N, dtype=cp.int32)             # Number of vaccinating neighbors
-    Nbrvacc_no=cp.zeros(N, dtype=cp.int32)              # Number of non-vaccinating neighbors
     Adverse=cp.zeros(N, dtype=cp.int32)                 # Number of adverse effects in each household, newborns vs others?
     Vaccinated_new=cp.zeros(N, dtype=cp.int32)          # Number of daily vaccinated children per household
     Vaccinated=cp.zeros(N, dtype=cp.int32)              # Number of vaccinated children (cumulative in each household)
@@ -78,6 +74,7 @@ def csbn_epidemic(N, I0, q, qeps, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
     PV_info=cp.zeros(N, dtype=cp.float32)      # Probability to vaccinate considering social influence
     P_infection=cp.zeros(N, dtype=cp.float32)  # Probability of infection based on number of infected children in the neighborhood and in the household 
     Infected[:,1]=AllInfected                  # Newly infected children on the first day
+    nV=cp.zeros(N, dtype=cp.int32)             # number of vaccinating neighbors 
     blocks=(blocksize_x,1,1)    # number of blocks in the grid to cover all indices see grid later
     grids=(math.ceil(N/blocksize_x),1,1) # set grid size
     seed=int.from_bytes(os.urandom(4),'big') # Random seed from OS
@@ -114,30 +111,33 @@ def csbn_epidemic(N, I0, q, qeps, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
         if (day>=MaxDays): 
             print("Error, must increase MaxDays!")
             sys.exit()
-        # Converts Vacc_yesnonever=-1,0 into Nbrvacc_yes=0 &  Nbrvacc_no=1
-        # Converts Vacc_yesnonever=+1 into Nbrvacc_yes=1 &  Nbrvacc_no=0
-        grids=(math.ceil(N/blocksize_x),1,1) # set grid size N
-        Vaccinators_Separate(grids, blocks, (N, Vaccinator_yesnonever, Nbrvacc_yes, Nbrvacc_no))
 
-        # Counts how many neighbors vaccinate or do not vaccinate
-        grids=(math.ceil(NP/blocksize_x),1,1) # set grid size NP
-        # Pressure_Update(grids, blocks, (NP, Parents_mtx_indx, Vaccinator_yesnonever, Nbrvacc_yes, Nbrvacc_no))
-        Pq_yes.fill(1.0)
-        P1q_yes.fill(1.0)
-        Pq_no.fill(1.0)
-        P1q_no.fill(1.0)
-        Pressure_Update(grids, blocks, (NP, Parents_mtx_indx, Vaccinator_yesnonever, Pq_yes, P1q_yes, Pq_no, 
-                P1q_no, qij, qji))
-
-        # pr is the (global) probability to vaccinate based on total adverse effects and total infection, without social influence
+            # pr is the (global) probability to vaccinate based on total adverse effects and total infection, without social influence
         pr= 1.0/(1.0+np.exp(ggamma*np.asscalar(cp.sum(Adverse).get())-aalpha*np.asscalar(cp.sum(Infected_Total).get())))
 
-        grids=(math.ceil(N/blocksize_x),1,1) # set grid size N
-        # Updates PV_info - the probability to vaccinate based on social influence for each household
-        # Social influence is based on the number of neighbors that vaccinate or do not vaccinate
-        #pv_info_update(grids, blocks, (N, PV_info, cp.float32(p0), cp.float32(q), Nbrvacc_yes, Nbrvacc_no, 
-        #        Vaccinator_yesnonever))
-        pv_info_update(grids, blocks, (N, PV_info, cp.float32(pr), Vaccinator_yesnonever, Pq_yes, P1q_yes, Pq_no, P1q_no))
+        if (delta==9999):  # qij is used
+            Pq_yes.fill(1.0)
+            P1q_yes.fill(1.0)
+            Pq_no.fill(1.0)
+            P1q_no.fill(1.0)
+            grids=(math.ceil(NP/blocksize_x),1,1) # set grid size NP
+            Pressure_Update(grids, blocks, (NP, Parents_mtx_indx, Vaccinator_yesnonever, Pq_yes, P1q_yes, 
+                            Pq_no, P1q_no, qij, qji))
+
+            grids=(math.ceil(N/blocksize_x),1,1) # set grid size N
+            # Updates PV_info - the probability to vaccinate based on social influence for each household
+            # Social influence is based on the number of neighbors that vaccinate or do not vaccinate
+            pv_info_update(grids, blocks, (N, PV_info, cp.float32(pr), Vaccinator_yesnonever, Pq_yes, P1q_yes, 
+                                        Pq_no, P1q_no))
+        else: # voting model
+            nV.fill(0)
+            grids=(math.ceil(NP/blocksize_x),1,1) # set grid size NP
+            nV_Update(grids, blocks, (NP, Parents_mtx_indx, Vaccinator_yesnonever, nV))
+            pi=np.log(pr/(1.0-pr))
+            grids=(math.ceil(N/blocksize_x),1,1) # set grid size N
+            # Updates PV_info - the probability to vaccinate based on social influence for each household
+            pv_delta_update(grids, blocks, (N, PV_info, cp.float32(delta), cp.float32(pi), 
+                                                 cp.float32(pr), nV, nS))
 
         # Of the households that may vaccinate, update based on PV_info. Never-vaccinators will not change
         seed=int.from_bytes(os.urandom(4),'big') # Generates random seed from OS
