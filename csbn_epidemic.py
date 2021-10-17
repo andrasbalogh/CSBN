@@ -112,8 +112,9 @@ def csbn_epidemic(N, I0, q, qeps, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
             print("Error, must increase MaxDays!")
             sys.exit()
 
-            # pr is the (global) probability to vaccinate based on total adverse effects and total infection, without social influence
-        pr= 1.0/(1.0+np.exp(ggamma*np.asscalar(cp.sum(Adverse).get())-aalpha*np.asscalar(cp.sum(Infected_Total).get())))
+        # pr is the (global) probability to vaccinate based on total adverse effects and total infection, without social influence
+        pi=-ggamma*np.asscalar(cp.sum(Adverse).get())+aalpha*np.asscalar(cp.sum(Infected_Total).get())
+        pr= 1.0/(1.0+np.exp(-pi))
 
         if (delta==9999):  # qij is used
             Pq_yes.fill(1.0)
@@ -133,7 +134,6 @@ def csbn_epidemic(N, I0, q, qeps, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
             nV.fill(0)
             grids=(math.ceil(NP/blocksize_x),1,1) # set grid size NP
             nV_Update(grids, blocks, (NP, Parents_mtx_indx, Vaccinator_yesnonever, nV))
-            pi=np.log(pr/(1.0-pr))
             grids=(math.ceil(N/blocksize_x),1,1) # set grid size N
             # Updates PV_info - the probability to vaccinate based on social influence for each household
             pv_delta_update(grids, blocks, (N, PV_info, cp.float32(delta), cp.float32(pi), 
