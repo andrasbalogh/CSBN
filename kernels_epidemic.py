@@ -90,8 +90,8 @@ nV_Update = cp.RawKernel(r'''
          if(k<NP){ 
             j=(int)floor(0.5*(1.0+sqrt(8.0*Parents_mtx_indx[k]+1.0)));
             i=(int)(Parents_mtx_indx[k]-(j-1)*j/2);   
-            if (Vaccinator_yesnonever[j]<=0) { nV[i]=nV[i]+1;  }
-            if (Vaccinator_yesnonever[i]<=0) { nV[j]=nV[j]+1;  }
+            if (Vaccinator_yesnonever[j]>0) { nV[i]=nV[i]+1;  }
+            if (Vaccinator_yesnonever[i]>0) { nV[j]=nV[j]+1;  }
          }
      }
      ''', 'nV_Update')
