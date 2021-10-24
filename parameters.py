@@ -39,7 +39,7 @@ NQ=1
 delta= 0.5      # Injunctive social pressure  (not used if delta =9999)
 
 rho=0.01        # Probability of vaccination access, Vaccinate_Susceptibles
-Padv=0.01       # Probability of adverse effect from vaccine, Vaccinate_Susceptibles
+Padv=0.001       # Probability of adverse effect from vaccine, Vaccinate_Susceptibles
 aalpha=10**(-4) # Household view of infection (encourages vaccination), p0
 ggamma=0.1      # Household view of adverse effect (discourages vaccination), p0
 bbeta=0.06      # Probability of transmission between households, Pinfection_update
@@ -50,9 +50,9 @@ ssigma=0.005    # Birth rate
 gestation=280   # gestation time
 MaxDays=1000    # storage size for daily epidemics statistics (code stops with error if it is not large enough)
 
-# The recovery process follows gamma distribution ip: days it takes to recover, shape: average length
-#shape = 22; ip=28; # Pertosis
-shape = 11;  ip=16; # Measles
+# The recovery process follows gamma distribution ip: days it takes to recover, mu: average length
+#mu = 22; ip=28; # Pertosis
+mu = 11;  ip=16; # Measles
 
 # note that the epidemic part always tries to read network that was previously saved into file! 
 # once the files are generated there is no need to run network generation again
