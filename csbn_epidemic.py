@@ -210,13 +210,22 @@ def csbn_epidemic(N, I0, q, qeps, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
         ax.plot(Days,Daily_P0[0:day+1].get())
         ax.set_title("Daily P0") 
         ax.set_xlabel("Days")
-        filename="data/epidemic{:03d}.pdf".format(netindx)
+        if (delta==9999):
+            filename="data/epidemic-q-{:02d}-network-{:03d}.pdf".format(int(100*q),netindx)
+        else:
+            filename="data/epidemic-delta-network-{:03d}.pdf".format(netindx)
         fig.savefig(filename)
         plt.close()
     if((epidemic_save) and (delta==9999)):
-        filename=open("data/epidemic-q-{:02d}.csv".format(int(100*q)),"a+")
-        #% day, Sum(Daily_Incidence), sum(Daily_Vaccinators)), sum(Daily_Suscep), sum(Recovered),  maxloc(dIncidence), 
-        # maxval(dIncidence), Daily_Vaccinators(day), minval(Daily_Vaccinators(1:day)), maxval(Daily_Vaccinators(1:day), NChildren
+        if (delta==9999):
+            filename=open("data/epidemic-q-{:02d}.csv".format(int(100*q)),"a+")
+            file_infected="data/infected-q-{:02d}-network-{:03d}.csv".format(int(100*q), netindx)
+        else:
+            filename=open("data/epidemic-delta.csv","a+")
+            file_infected="data/infected-delta-network-{:03d}.csv".format(netindx)
+        #% day, Sum(Daily_Incidence), sum(Daily_Vaccinators)), sum(Daily_Suscep), sum(Recovered),  
+        # maxloc(dIncidence), maxval(dIncidence), Daily_Vaccinators(day), 
+        # minval(Daily_Vaccinators(1:day)), maxval(Daily_Vaccinators(1:day), NChildren
         filename.writelines("{:4d}, {:6d}, {:6d}, {:4d}, {:6d}, {:5d}, {:6d}, {:6d}, {:6d}, {:6d}, {:6d} \n".format(
             day+1, cp.sum(Daily_Incidence[0:day+1]).get(), cp.sum(Daily_Vaccinators[0:day+1]).get(), 
             cp.sum(Daily_Suscep[0:day+1]).get(), cp.sum(Daily_Recovered[0:day+1]).get(), 
@@ -224,3 +233,4 @@ def csbn_epidemic(N, I0, q, qeps, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
             Daily_Vaccinators[day].get(), cp.amin(Daily_Vaccinators[0:day+1]).get(), 
             cp.amax(Daily_Vaccinators[0:day+1]).get(), Daily_Children[day].get() ))
         filename.close()
+        np.savetxt(file_infected, Infected_Total[0:day+1].get(), fmt='%i', delimiter=",")
