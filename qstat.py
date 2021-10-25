@@ -15,8 +15,8 @@ for filePath in fileList:
     except:
         print("Error while deleting file : ", filePath)
 
-if(delta==9999):
-    print('delta=9999, not using injunctive social pressure, no q-files.')
+if(delta!=9999):
+    print('delta is not 9999, not using injunctive social pressure, no q-files.')
     sys.exit(0)  
 
 qx=np.arange(qmin,qmax+dq,dq,dtype=float)
