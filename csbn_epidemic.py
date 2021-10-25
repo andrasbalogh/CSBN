@@ -216,7 +216,7 @@ def csbn_epidemic(N, I0, q, qeps, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
             filename="data/epidemic-delta-network-{:03d}.pdf".format(netindx)
         fig.savefig(filename)
         plt.close()
-    if((epidemic_save) and (delta==9999)):
+    if(epidemic_save):
         if (delta==9999):
             filename=open("data/epidemic-q-{:02d}.csv".format(int(100*q)),"a+")
             file_infected="data/infected-q-{:02d}-network-{:03d}.csv".format(int(100*q), netindx)
