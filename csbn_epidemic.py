@@ -38,16 +38,17 @@ def csbn_epidemic(N, I0, q, qeps, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
     Children=cp.add(AllInfected,Susceptible)  # Total number of children. Later newborns are added
     nS=cp.asarray(data['nS'],dtype=cp.int32)
     
-    if(q-qeps<0 or q+qeps>1):
-        print("Error! (q-qeps,q+qeps)=(%5.3f,%5.3f) is not in the [0,1] range!"% (q-qeps, q+qeps))
-        sys.exit()
+    if (delta==9999):
+        if(q-qeps<0 or q+qeps>1):
+            print("Error! (q-qeps,q+qeps)=(%5.3f,%5.3f) is not in the [0,1] range!"% (q-qeps, q+qeps))
+            sys.exit()
 
-    if qeps==0.0:
-        qij=q*cp.ones(NP, dtype=cp.float32)
-        qji=q*cp.ones(NP, dtype=cp.float32)
-    else:
-        qij=cp.random.uniform(low=q-qeps, high=q+qeps, size=NP, dtype=cp.float32)
-        qji=cp.random.uniform(low=q-qeps, high=q+qeps, size=NP, dtype=cp.float32)
+        if qeps==0.0:
+            qij=q*cp.ones(NP, dtype=cp.float32)
+            qji=q*cp.ones(NP, dtype=cp.float32)
+        else:
+            qij=cp.random.uniform(low=q-qeps, high=q+qeps, size=NP, dtype=cp.float32)
+            qji=cp.random.uniform(low=q-qeps, high=q+qeps, size=NP, dtype=cp.float32)
     
     Pq_yes=cp.ones(N, dtype=cp.float32)
     P1q_yes=cp.ones(N, dtype=cp.float32)
@@ -212,7 +213,7 @@ def csbn_epidemic(N, I0, q, qeps, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
         filename="data/epidemic{:03d}.pdf".format(netindx)
         fig.savefig(filename)
         plt.close()
-    if((epidemic_save) and (delta!=9999)):
+    if((epidemic_save) and (delta==9999)):
         filename=open("data/epidemic-q-{:02d}.csv".format(int(100*q)),"a+")
         #% day, Sum(Daily_Incidence), sum(Daily_Vaccinators)), sum(Daily_Suscep), sum(Recovered),  maxloc(dIncidence), 
         # maxval(dIncidence), Daily_Vaccinators(day), minval(Daily_Vaccinators(1:day)), maxval(Daily_Vaccinators(1:day), NChildren
