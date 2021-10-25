@@ -27,7 +27,7 @@ def fR0(GPUnum, rowstart, rowend, params):
         print('Starting GPU {:1d} for rows {:2d}-{:2d}'.format(GPUnum, rowstart, rowend))
         Nrows=rowend-rowstart+1
         cp.cuda.Device(GPUnum).use()  # GPU used
-        ip=params[0]; shape=params[1]; N=params[2]; Nsp_Children=params[3]; Pc=params[4]; Mc=params[5]
+        ip=params[0]; mu=params[1]; N=params[2]; Nsp_Children=params[3]; Pc=params[4]; Mc=params[5]
         network_print=params[6]; lambdaTheta=params[7]; network_type=params[8]; R0_samplesize=params[9]
         ssigma=params[10]; gestation=params[11]; R0_repeat=params[12]; MaxDays=params[13]
 
@@ -56,7 +56,7 @@ def fR0(GPUnum, rowstart, rowend, params):
         chunk_remainder = NT-NTiterchunk
 
         disc = np.arange(ip+1)  
-        cumprob = stats.gamma.cdf(disc, shape, scale=1)
+        cumprob = stats.gamma.cdf(disc, mu, scale=1)
         Pincubtrans = cp.asarray((cumprob[1:ip+1]-cumprob[0:ip])/(cumprob[ip]-cumprob[0:ip]), dtype=cp.float32)
 
         AllInfected = cp.zeros(N, dtype=cp.int32)
