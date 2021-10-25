@@ -26,10 +26,16 @@ def fcsbn(GPUnum, NStart_netindx, NEnd_netindx):
                          blocksize_x, netindx, network_save, network_print)
 
             if epidemic_run:
-                for q in np.arange(qmin, qmax+dq, dq, dtype=float):
-                    for qind in range(NQ):
-                        csbn_epidemic(N, I0, q, qeps, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
-                              Peff, ssigma, gestation, MaxDays, ip, blocksize_x, netindx,
+                if(delta!=9999):
+                    q=0.0
+                    csbn_epidemic(N, I0, q, qeps, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
+                            Peff, ssigma, gestation, MaxDays, ip, blocksize_x, netindx,
+                            Pincubtrans, delta, epidemic_save, epidemic_print)
+                else:                 
+                    for q in np.arange(qmin, qmax+dq, dq, dtype=float):
+                        for qind in range(NQ):
+                            csbn_epidemic(N, I0, q, qeps, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
+                                Peff, ssigma, gestation, MaxDays, ip, blocksize_x, netindx,
                                 Pincubtrans, delta, epidemic_save, epidemic_print)
 
         print('GPU {:1d} is finished for networks {:2d}-{:2d}'.format(GPUnum, NStart_netindx, NEnd_netindx))
