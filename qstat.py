@@ -6,7 +6,7 @@ from parameters import *  # parameter file
 qx=np.arange(qmin,qmax+dq,dq,dtype=float)
 Nq=qx.size
 qn=np.arange(0,Nq,1,dtype=int)
-Nr=NQ*(netindx_end-netindx_start+1) # number of rows in the files data/epidemic-q-...txt
+Nr=NQ*(netindx_end-netindx_start+1) # number of rows in the files data/epidemic-q-...csv
 
 Ncol=11 # number of columns
 # lastday, Sum(Daily_Incidence), sum(Daily_Vaccinators)), sum(Daily_Suscep), sum(Recovered),  maxloc(dIncidence), 
@@ -17,7 +17,7 @@ stats=np.zeros((4,Ncol,Nq),dtype=float)
 
 
 for q in qn:
-    with open("data/epidemic-q-{:02d}.txt".format(int(qx[q]*100)), 'r') as inputfile:    
+    with open("data/epidemic-q-{:02d}.csv".format(int(qx[q]*100)), 'r') as inputfile:    
         rows = reader(inputfile)
         #rowi = next(rows);   rowi = next(rows); # two header lines
         for i in range(Nr):
