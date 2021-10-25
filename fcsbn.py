@@ -11,9 +11,9 @@ def fcsbn(GPUnum, NStart_netindx, NEnd_netindx):
     try:
         print('Starting GPU {:1d} for networks {:2d}-{:2d}'.format(GPUnum, NStart_netindx, NEnd_netindx))
         cp.cuda.Device(GPUnum).use()  # GPU used
-        # The recovery process follows gamma distribution ip: max days it takes to recover, shape: average length
+        # The recovery process follows gamma distribution ip: max days it takes to recover, mu: average length
         disc = np.arange(ip+1)
-        cumprob = stats.gamma.cdf(disc, shape, scale=1)
+        cumprob = stats.gamma.cdf(disc, mu, scale=1)
         Pincubtrans = cp.asarray(
             (cumprob[1:ip+1]-cumprob[0:ip])/(cumprob[ip]-cumprob[0:ip]), dtype=cp.float32)
         for netindx in range(NStart_netindx, NEnd_netindx+1):
