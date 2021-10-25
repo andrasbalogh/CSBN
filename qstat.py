@@ -3,6 +3,7 @@ from csv import reader
 import matplotlib.pyplot as plt
 import glob
 import os
+import sys
 from parameters import *  # parameter file
 
 # Get a list of all the files 
@@ -13,6 +14,10 @@ for filePath in fileList:
         os.remove(filePath)
     except:
         print("Error while deleting file : ", filePath)
+
+if(delta==9999):
+    print('delta=9999, not using injunctive social pressure, no q-files.')
+    sys.exit(0)  
 
 qx=np.arange(qmin,qmax+dq,dq,dtype=float)
 Nq=qx.size
