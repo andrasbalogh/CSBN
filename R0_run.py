@@ -33,8 +33,8 @@ gestation = 280
 MaxDays = 100 # estimated upper bond for the length of the epidemic (for storage)
 
 # The recovery process follows gamma distribution ip: days it takes to recover
-# shape = 22; ip=28;  # Pertosis
-shape = 11; ip = 16 # Measles
+# mu = 22; ip=28;  # Pertosis
+mu = 11; ip = 16 # Measles
 
 network_print = 1
 epidemic_save = 0
@@ -42,7 +42,7 @@ epidemic_print = 0
 
 ####### Do not modify below!!!! #######
 
-params=[ip, shape, N, Nsp_Children, Pc, Mc, network_print, lambdaTheta, network_type, R0_samplesize,
+params=[ip, mu, N, Nsp_Children, Pc, Mc, network_print, lambdaTheta, network_type, R0_samplesize,
         ssigma, gestation, R0_repeat, MaxDays]
 
 # create data directory if it does not exist
