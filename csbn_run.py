@@ -9,10 +9,21 @@ from fcsbn import *
 if not os.path.exists('data'):
     os.makedirs('data')
 
-# Have to delete previous files because results are added to the files line-by-line
-if epidemic_run*epidemic_save>0: 
+# if network_run all data files should be deleted
+if network_run>0: 
     # Get a list of all the files 
-    fileList = glob.glob('data/epidemic-q-*.csv')
+    fileList = glob.glob('data/*.*')
+    # Iterate over the list of filepaths & remove each file.
+    for filePath in fileList:
+        try:
+            os.remove(filePath)
+        except:
+            print("Error while deleting file : ", filePath)
+
+# Have to delete previous files because results are added to the files line-by-line
+if epidemic_run>0: 
+    # Get a list of all the files 
+    fileList = glob.glob('data/epidemic-q-*.csv')+glob.glob('data/q-*.pdf')
     # Iterate over the list of filepaths & remove each file.
     for filePath in fileList:
         try:
