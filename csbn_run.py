@@ -23,7 +23,7 @@ if network_run>0:
 # Have to delete previous files because results are added to the files line-by-line
 if epidemic_run>0: 
     # Get a list of all the files 
-    fileList = glob.glob('data/*.csv')+glob.glob('data/q-*.pdf')
+    fileList = glob.glob('data/*.csv')+glob.glob('data/q-*.pdf')+glob.glob('data/ep*.pdf')
     # Iterate over the list of filepaths & remove each file.
     for filePath in fileList:
         try:
