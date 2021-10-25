@@ -36,10 +36,10 @@ dq = 0.1
 qeps=0.05        # (q-qeps, q+qeps) interval to generate random qij, qji 
 # Repeat q's for social learning 
 NQ=1
-delta= 0.5      # Injunctive social pressure  (not used if delta =9999)
+delta= 0.5      # Injunctive social pressure  (not used if delta =9999, in that case q is used)
 
 rho=0.01        # Probability of vaccination access, Vaccinate_Susceptibles
-Padv=0.001       # Probability of adverse effect from vaccine, Vaccinate_Susceptibles
+Padv=0.0001       # Probability of adverse effect from vaccine, Vaccinate_Susceptibles
 aalpha=10**(-4) # Household view of infection (encourages vaccination), p0
 ggamma=0.1      # Household view of adverse effect (discourages vaccination), p0
 bbeta=0.06      # Probability of transmission between households, Pinfection_update
