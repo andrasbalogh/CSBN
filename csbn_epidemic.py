@@ -213,7 +213,7 @@ def csbn_epidemic(N, I0, q, qeps, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
         fig.savefig(filename)
         plt.close()
     if(epidemic_save):
-        filename=open("data/epidemic-q-{:02d}.txt".format(int(100*q)),"a+")
+        filename=open("data/epidemic-q-{:02d}.csv".format(int(100*q)),"a+")
         #% day, Sum(Daily_Incidence), sum(Daily_Vaccinators)), sum(Daily_Suscep), sum(Recovered),  maxloc(dIncidence), 
         # maxval(dIncidence), Daily_Vaccinators(day), minval(Daily_Vaccinators(1:day)), maxval(Daily_Vaccinators(1:day), NChildren
         filename.writelines("{:4d}, {:6d}, {:6d}, {:4d}, {:6d}, {:5d}, {:6d}, {:6d}, {:6d}, {:6d}, {:6d} \n".format(
