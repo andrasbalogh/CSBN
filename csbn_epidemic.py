@@ -223,11 +223,11 @@ def csbn_epidemic(N, I0, q, qeps, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
         else:
             filename=open("data/epidemic-delta.csv","a+")
             file_infected="data/infected-delta-network-{:03d}.csv".format(netindx)
-        #% day, Sum(Daily_Incidence), sum(Daily_Vaccinators)), sum(Daily_Suscep), sum(Recovered),  
+        #% day, Sum(Daily_Incidence), sum(Daily_Vaccinations)), sum(Daily_Suscep), sum(Recovered),  
         # maxloc(dIncidence), maxval(dIncidence), Daily_Vaccinators(day), 
         # minval(Daily_Vaccinators(1:day)), maxval(Daily_Vaccinators(1:day), NChildren
         filename.writelines("{:4d}, {:6d}, {:6d}, {:4d}, {:6d}, {:5d}, {:6d}, {:6d}, {:6d}, {:6d}, {:6d} \n".format(
-            day+1, cp.sum(Daily_Incidence[0:day+1]).get(), cp.sum(Daily_Vaccinators[0:day+1]).get(), 
+            day+1, cp.sum(Daily_Incidence[0:day+1]).get(), cp.sum(Daily_Vaccinations[0:day+1]).get(), 
             cp.sum(Daily_Suscep[0:day+1]).get(), cp.sum(Daily_Recovered[0:day+1]).get(), 
             cp.argmax(Daily_Incidence[0:day+1]).get(), cp.amax(Daily_Incidence[0:day+1]).get(),
             Daily_Vaccinators[day].get(), cp.amin(Daily_Vaccinators[0:day+1]).get(), 
