@@ -2,14 +2,14 @@ import numpy as np # numerical library
 import cupy as cp # CUDA accelerated library
 import os  # for reading random seed from OS
 import sys # for stopping code if needed
+from scipy import stats
 import matplotlib.pyplot as plt
 from kernels_epidemic import * # kernel functions (CUDA c++)
 import math # for ceiling function
 from cupyx.scipy import sparse
+from parameters import *  # parameter file
 
-def csbn_epidemic(N, I0, q, qeps, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
-                  Peff, ssigma, gestation, MaxDays, ip, blocksize_x, netindx,
-                  Pincubtrans, delta, epidemic_save, epidemic_print):
+def csbn_epidemic(q, netindx):
     # Reading network data of children and parents
     filename="data/csbn_network{:03d}.npz".format(netindx)
     try:
@@ -38,6 +38,11 @@ def csbn_epidemic(N, I0, q, qeps, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
     Children=cp.add(AllInfected,Susceptible)  # Total number of children. Later newborns are added
     nS=cp.asarray(data['nS'],dtype=cp.int32)
     
+    # The recovery process follows gamma distribution ip: max days it takes to recover, mu: average length
+    disc = np.arange(ip+1)
+    cumprob = stats.gamma.cdf(disc, mu, scale=1)
+    Pincubtrans = cp.asarray((cumprob[1:ip+1]-cumprob[0:ip])/(cumprob[ip]-cumprob[0:ip]), dtype=cp.float32)
+
     if (delta==9999):
         if(q-qeps<0 or q+qeps>1):
             print("Error! (q-qeps,q+qeps)=(%5.3f,%5.3f) is not in the [0,1] range!"% (q-qeps, q+qeps))
@@ -75,8 +80,7 @@ def csbn_epidemic(N, I0, q, qeps, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
     PV_info=cp.zeros(N, dtype=cp.float32)      # Probability to vaccinate considering social influence
     P_infection=cp.zeros(N, dtype=cp.float32)  # Probability of infection based on number of infected children in the neighborhood and in the household 
     Infected[:,1]=AllInfected                  # Newly infected children on the first day
-    nV=cp.zeros(N, dtype=cp.int32)             # number of vaccinating neighbors 
-    blocks=(blocksize_x,1,1)    # number of blocks in the grid to cover all indices see grid later
+    nV=cp.zeros(N, dtype=cp.int32)             # number of vaccinating neighbors   
     grids=(math.ceil(N/blocksize_x),1,1) # set grid size
     seed=int.from_bytes(os.urandom(4),'big') # Random seed from OS
     # Uses the number of existing children and birth rate (ssigma) to create pregnancies at different stages in each household.
@@ -84,17 +88,18 @@ def csbn_epidemic(N, I0, q, qeps, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
     # Pregnancy[i] = j, 0 < j < gestation - jth day of pregnancy
     pregnancy_burn_in(grids, blocks, (N, cp.float32(ssigma), seed, Children, Pregnancy, gestation))
 
-    seed=int.from_bytes(os.urandom(4),'big') # Generates random seed from OS
     # Initial set up of vaccinators and non-vaccinators, based on the initial infected (I0)
     # Vaccinator_yesnonever[i] = 0/1, family i doesn't vaccinate/does vaccinate. Can change, see Vaccinator_update 
-    Vaccinators_Init(grids, blocks, (N, cp.float32(1.0/(1.0+np.exp(-aalpha*I0))),seed,
-                                    Vaccinator_yesnonever))
+    Vaccinator_yesnonever =(cp.random.rand(N)< (1.0/(1.0+np.exp(-aalpha*I0)))).astype(cp.int32)
+
     # Setting up never-vaccinators, Vaccinator_yesnonever[i] = -1. NV0 proportion of non-vaccinators
     Nvacc=np.asscalar(cp.count_nonzero(Vaccinator_yesnonever).get()) # Number of vaccinators
     N_nevervacc=int(round(NV0*(N-Nvacc))) # Calculates the number of never-vaccinators
     idx_Nonvacc=cp.argmin(Vaccinator_yesnonever) # Indices of non-vaccinators, min value of Vaccinator_yesnonever is 0
     idx_Nevervacc=cp.random.choice(N-Nvacc, size=N_nevervacc, replace=False, p=None) # From the number of non-vaccinators (N-Nvacc), chooserandomly N_nevervacc indices (never vaccinators)
     cp.put(Vaccinator_yesnonever, idx_Nevervacc, -(cp.ones(N_nevervacc,dtype=cp.int16))) # Set the never-vaccinators (-1) into Vaccinator_yesnonever
+    
+    Attr1=(cp.random.rand(N)< P_attr).astype(cp.int32)
 
     # Daily Process: Begins by initializing Day 0
     day=0
@@ -117,20 +122,25 @@ def csbn_epidemic(N, I0, q, qeps, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
         pi=-ggamma*np.asscalar(cp.sum(Adverse).get())+aalpha*np.asscalar(cp.sum(Infected_Total).get())
         pr= 1.0/(1.0+np.exp(-pi))
 
-        if (delta==9999):  # qij is used
+        if (delta==9999):  # qij or attributes are used
             Pq_yes.fill(1.0)
             P1q_yes.fill(1.0)
             Pq_no.fill(1.0)
             P1q_no.fill(1.0)
             grids=(math.ceil(NP/blocksize_x),1,1) # set grid size NP
-            Pressure_Update(grids, blocks, (NP, Parents_mtx_indx, Vaccinator_yesnonever, Pq_yes, P1q_yes, 
-                            Pq_no, P1q_no, qij, qji))
+            if(N_attr1<2): # qij is used
+                Pressure_Update(grids, blocks, (NP, Parents_mtx_indx, Vaccinator_yesnonever, 
+                                Pq_yes, P1q_yes, Pq_no, P1q_no, qij, qji))
+            else:  # attributes are used
+                seed=int.from_bytes(os.urandom(4),'big') # Random seed from OS
+                Pressure_Updated_Attr1(grids, blocks, (NP, Parents_mtx_indx, Vaccinator_yesnonever, 
+                                Pq_yes, P1q_yes, Pq_no, P1q_no, Attr1, seed))
 
             grids=(math.ceil(N/blocksize_x),1,1) # set grid size N
             # Updates PV_info - the probability to vaccinate based on social influence for each household
             # Social influence is based on the number of neighbors that vaccinate or do not vaccinate
-            pv_info_update(grids, blocks, (N, PV_info, cp.float32(pr), Vaccinator_yesnonever, Pq_yes, P1q_yes, 
-                                        Pq_no, P1q_no))
+            pv_info_update(grids, blocks, (N, PV_info, cp.float32(pr), Vaccinator_yesnonever, 
+                                                Pq_yes, P1q_yes, Pq_no, P1q_no))
         else: # voting model
             nV.fill(0)
             grids=(math.ceil(NP/blocksize_x),1,1) # set grid size NP
@@ -234,3 +244,4 @@ def csbn_epidemic(N, I0, q, qeps, rho, Padv, aalpha, ggamma, bbeta, bbetah, NV0,
             cp.amax(Daily_Vaccinators[0:day+1]).get(), Daily_Children[day].get() ))
         filename.close()
         np.savetxt(file_infected, Infected_Total[0:day+1].get(), fmt='%i', delimiter=",")
+
