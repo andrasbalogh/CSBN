@@ -8,10 +8,9 @@ from kernels_network import * # kernel functions (CUDA c++)
 from kernels_trn_network import * 
 from kernels_gamma_network import *
 import math # for ceiling function
+from parameters import *  # parameter file
 
-def csbn_network(network_func, N, Nsp_Children, Nsp_Parents, Plink, Padd, Pret, I0, Pc, Mc, lambdaTheta,
-                 blocksize_x, netindx, network_save, network_print):
-    blocks=(blocksize_x,1,1) 
+def csbn_network(network_func, netindx):
     NT=(N*(N-1))//2 # Number of upper triangular entries
     NTchunk= 234881024 #335544320 234881024 117440512 16777216 
     NTiter=NT//NTchunk
@@ -136,3 +135,4 @@ def csbn_network(network_func, N, Nsp_Children, Nsp_Parents, Plink, Padd, Pret, 
         filename="data/network_diagnostics{:03d}.pdf".format(netindx)
         plt.savefig(filename)
         plt.close()
+
