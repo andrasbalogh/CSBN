@@ -20,50 +20,69 @@ pregnancy_burn_in = cp.RawKernel(r'''
      }
      ''', 'pregnancy_burn_in', backend='nvcc')
 
-Vaccinators_Init = cp.RawKernel(r'''
-     #include <curand_kernel.h>
-     extern "C" __global__  
-     void Vaccinators_Init(const int N, const float VProb, int seed, int* Vaccinator_yesnonever){
-         int i = blockDim.x * blockIdx.x + threadIdx.x;
-         int seq, offset;
-         seq = 0;
-         offset = 0;
-         curandState h;
-         if(i<N){ 
-               curand_init(seed+i,seq,offset,&h);
-               if(curand_uniform(&h)<VProb) { Vaccinator_yesnonever[i] = 1; }
-               else { Vaccinator_yesnonever[i] = 0; }
-         }
-     }
-     ''', 'Vaccinators_Init', backend='nvcc')
-
 Pressure_Update = cp.RawKernel(r'''
-     extern "C" __global__  
-     void Pressure_Update(const int NP, const unsigned long int* Parents_mtx_indx, const int* Vaccinator_yesnonever, 
-              float* Pq_yes, float* P1q_yes, float* Pq_no, float* P1q_no, const float* qij, const float* qji){
-         unsigned long int i, j;
-         int k = blockDim.x * blockIdx.x + threadIdx.x;
-         if(k<NP){ 
-            j=(int)floor(0.5*(1.0+sqrt(8.0*Parents_mtx_indx[k]+1.0)));
-            i=(int)(Parents_mtx_indx[k]-(j-1)*j/2);   
+   extern "C" __global__  
+   void Pressure_Update(const int NP, const unsigned long int* Parents_mtx_indx, const int* Vaccinator_yesnonever, 
+            float* Pq_yes, float* P1q_yes, float* Pq_no, float* P1q_no, const float* qij, const float* qji){
+      unsigned long int i, j;
+      int k = blockDim.x * blockIdx.x + threadIdx.x;
+      if(k<NP){ 
+         j=(int)floor(0.5*(1.0+sqrt(8.0*Parents_mtx_indx[k]+1.0)));
+         i=(int)(Parents_mtx_indx[k]-(j-1)*j/2);   
 
-            if (Vaccinator_yesnonever[j]>0) { 
-              Pq_yes[i]=Pq_yes[i]*qji[k]; 
-              P1q_yes[i]=P1q_yes[i]*(1.0-qji[k]); 
-            } else { 
-              Pq_no[i]=Pq_no[i]*qji[k]; 
-              P1q_no[i]=P1q_no[i]*(1.0-qji[k]); 
-            }
-            if (Vaccinator_yesnonever[i]>0) { 
-              Pq_yes[j]=Pq_yes[j]*qij[k]; 
-              P1q_yes[j]=P1q_yes[j]*(1.0-qij[k]); 
-            } else { 
-              Pq_no[j]=Pq_no[j]*qij[k]; 
-              P1q_no[j]=P1q_no[j]*(1.0-qij[k]); 
-            }
+         if (Vaccinator_yesnonever[j]>0) { 
+            Pq_yes[i]=Pq_yes[i]*qji[k]; 
+            P1q_yes[i]=P1q_yes[i]*(1.0-qji[k]); 
+         } else { 
+            Pq_no[i]=Pq_no[i]*qji[k]; 
+            P1q_no[i]=P1q_no[i]*(1.0-qji[k]); 
          }
-     }
-     ''', 'Pressure_Update')
+         if (Vaccinator_yesnonever[i]>0) { 
+            Pq_yes[j]=Pq_yes[j]*qij[k]; 
+            P1q_yes[j]=P1q_yes[j]*(1.0-qij[k]); 
+         } else { 
+            Pq_no[j]=Pq_no[j]*qij[k]; 
+            P1q_no[j]=P1q_no[j]*(1.0-qij[k]); 
+         }
+      }
+   }
+   ''', 'Pressure_Update')
+
+Pressure_Updated_Attr1 = cp.RawKernel(r'''
+   #include <curand_kernel.h>
+   extern "C" __global__  
+   void Pressure_Updated_Attr1(const int NP, const unsigned long int* Parents_mtx_indx, 
+            const int* Vaccinator_yesnonever, float* Pq_yes, float* P1q_yes, float* Pq_no, 
+            float* P1q_no, const int* Attr1, const int seed){
+      int k = blockDim.x * blockIdx.x + threadIdx.x;
+      if(k<NP){
+         unsigned long int i, j;
+         float qji, qij;
+         int seq = 0,  offset = 0;
+         curandState h;
+         curand_init(seed+k,seq,offset,&h); 
+         j=(int)floor(0.5*(1.0+sqrt(8.0*Parents_mtx_indx[k]+1.0)));
+         i=(int)(Parents_mtx_indx[k]-(j-1)*j/2);  
+
+	      qji=0.9 * Attr1[j] + curand_uniform(&h)*0.1;
+	      qij=0.9 * Attr1[i] + curand_uniform(&h)*0.1; 
+         if (Vaccinator_yesnonever[j]>0) { 
+            Pq_yes[i]=Pq_yes[i]*qji; 
+            P1q_yes[i]=P1q_yes[i]*(1.0-qji); 
+         } else { 
+            Pq_no[i]=Pq_no[i]*qji; 
+            P1q_no[i]=P1q_no[i]*(1.0-qji); 
+         }
+         if (Vaccinator_yesnonever[i]>0) { 
+            Pq_yes[j]=Pq_yes[j]*qij; 
+            P1q_yes[j]=P1q_yes[j]*(1.0-qij); 
+         } else { 
+            Pq_no[j]=Pq_no[j]*qij; 
+            P1q_no[j]=P1q_no[j]*(1.0-qij); 
+         }
+      }
+   }
+   ''', 'Pressure_Updated_Attr1', backend='nvcc') # have to use nvcc with curand_kernel.h
 
 pv_info_update = cp.RawKernel(r'''
      extern "C" __global__  
@@ -214,7 +233,7 @@ Recover_Infected = cp.RawKernel(r'''
            AllInfected[i]=AllInfected[i]-Infected[i*ip+ip-1];
            Infected[i*ip+ip-1]=0;
            for(dayofinf=ip-2; dayofinf>=0; dayofinf--) {
-             // Inf(i,0) Inf(i,1)...Inf(i,ip−2) Inf(i,ip−1)
+             // Inf(i,0) Inf(i,1)...Inf(i,ip??2) Inf(i,ip??1)
              nInf_i_day=Infected[i*ip+dayofinf];
              for(k=1; k<=nInf_i_day; k++) { 
                if(curand_uniform(&h)< Pincubtrans[dayofinf]) {
@@ -232,7 +251,8 @@ Recover_Infected = cp.RawKernel(r'''
 
 Infected_Neighbors = cp.RawKernel(r'''
      extern "C" __global__  
-     void Infected_Neighbors(const int NC, unsigned long int* Children_mtx_indx, int* AllInfected, int* InfNeighb){
+     void Infected_Neighbors(const int NC, unsigned long int* Children_mtx_indx, int* AllInfected, 
+               int* InfNeighb){
          unsigned long int i, j;
          int k = blockDim.x * blockIdx.x + threadIdx.x;
          if(k<NC){ 
