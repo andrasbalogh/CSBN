@@ -4,14 +4,14 @@ ern_cpmtx = cp.RawKernel(r'''
 #include <curand_kernel.h>             //needed for curand 
 extern "C" __global__ void ern_cpmtx(const unsigned long int NPchunk, 
            const unsigned long int NPshift, const float Plink, 
-           const float Pret, const float Padd, const float lambdaTheta, int seed, const int* Children, 
-           int* Children_mtx_chunk, int* Parents_mtx_chunk){
+           const float Pret, const float Padd, const float lambdaTheta, const int seed, 
+           const int* Children, int* Children_mtx_chunk, int* Parents_mtx_chunk){
       unsigned long int k = blockDim.x * blockIdx.x + threadIdx.x;
       unsigned long int i, j, seq, offset;
-      seed=seed+NPshift+k; seq = 0;  offset = 0; // different seed
+      seq = 0;  offset = 0; 
       curandState h;     // h will store the random numbers
       if(k<NPchunk){ 
-         curand_init(seed,seq,offset,&h); // init random number generator 
+         curand_init(seed+NPshift+k,seq,offset,&h); // init random number generator 
          j=(int)floor(0.5*(1.0+sqrt(8.0*(NPshift+k)+1.0)));
          i=(int)(k+NPshift-(j-1)*j/2);
          if(curand_uniform(&h)<Plink*sqrt((float)(Children[i]*Children[j]))){
