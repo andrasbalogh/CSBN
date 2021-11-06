@@ -4,10 +4,9 @@ import cupy as cp # CUDA accelerated library
 import sys
 import os # needed for reading random seed form OS file /dev/random
 from kernels_network_barabasi import * # kernel functions (CUDA c++)
+from parameters import *  # parameter file
 
-def barabasifn (blocksize_x, N, Nsp_Children, Nsp_Parents, I0, Pc, Mc, Padd, Pret, netindx, network_save, 
-                network_print):
-
+def barabasifn (netindx):
     N_mtx_Children = 0 # will store the actual number of connections
     N_mtx_Parents = 0 # will store the actual number of connections
     Susceptible=cp.random.binomial(Mc,Pc, size=N, dtype=cp.int32) 
@@ -27,7 +26,6 @@ def barabasifn (blocksize_x, N, Nsp_Children, Nsp_Parents, I0, Pc, Mc, Padd, Pre
     N_mtx_Children=1
     N_mtx_Parents=1 # Should it be read and added with a probability ?????????
 
-    blocks=(blocksize_x,1,1)    # number of blocks in the grid to cover all indices see grid later
     grids=(N//blocksize_x+ 1*(N % blocksize_x != 0),1,1) # set grid size
     for j in range(2,N):
         c_mtx_index.fill(0)
@@ -56,13 +54,21 @@ def barabasifn (blocksize_x, N, Nsp_Children, Nsp_Parents, I0, Pc, Mc, Padd, Pre
                                 stop=N_mtx_Parents, step=1,
                                 dtype=cp.int64),
                                 p_mtx_index[cp.flatnonzero(p_mtx_index)])
+    # calculate households' social connections
+    from cupyx.scipy import sparse
+    import matplotlib.pyplot as plt
+    Jp = (cp.floor((1+cp.sqrt(8*Parents_mtx_indx[0:N_mtx_Parents]+1))/2)).astype(cp.int64)
+    Ip = (Parents_mtx_indx[0:N_mtx_Parents] - ((Jp*(Jp-1))/2)).astype(cp.int64)
+    # upper triangular part
+    PP = sparse.coo_matrix((cp.ones(int(N_mtx_Parents), dtype=cp.float32), (Ip, Jp)), shape=(N, N))
+    nS= (cp.ravel(sparse.spmatrix.sum(PP, axis=0)+cp.transpose(sparse.spmatrix.sum(PP, axis=1)))).astype(cp.int32)
 
     if network_save:
         filename="data/csbn_network{:03d}".format(netindx)
         np.savez(filename, I0=I0, Infected=All_Infected.get(), N=N,
                 Susceptible=Susceptible.get(), NC=N_mtx_Children,
                 Children_mtx_indx=Children_mtx_indx[0:N_mtx_Children].get(),
-                NP=N_mtx_Parents,
+                NP=N_mtx_Parents, nS=nS.get(),
                 Parents_mtx_indx=Parents_mtx_indx[0:N_mtx_Parents].get(),
                 Plink=0, Pret=Pret, Padd=Padd)
     if network_print:
@@ -94,3 +100,4 @@ def barabasifn (blocksize_x, N, Nsp_Children, Nsp_Parents, I0, Pc, Mc, Padd, Pre
         filename="data/network_diagnostics{:03d}.pdf".format(netindx)
         plt.savefig(filename)
         plt.close()
+
