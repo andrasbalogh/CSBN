@@ -4,11 +4,11 @@
 Python CUDA code using the CuPy library to simulate parental decision-making about vaccinations against a childhood disease that spreads through a contact network. This model considers a bilayer network comprising two overlapping networks, which are either Erdős–Rényi (random) networks or Barabási–Albert networks. The model also employs a Bayesian aggregation rule for observational social learning on a social network. This new model encompasses other decision models, such as voting and DeGroot models, as special cases. Using our model, we demonstrate how certain levels of social learning about vaccination preferences can converge opinions, influencing vaccine uptake and ultimately disease spread. In addition, we explore how two different cultures of social learning affect the establishment of social norms of vaccination and the uptake of vaccines. In every scenario, the interplay between the dynamics of observational social learning and disease spread is influenced by the network’s topology, along with vaccine safety and availability.
 
 ## Publication:
-Modeling the effect of observational social learning on parental decision-making for childhood vaccination and diseases spread over household networks
-Tamer Oraby* and Andras Balogh
-Front. Epidemiol., 12 January 2024
-Sec. Infectious Disease Epidemiology
-Volume 3 - 2023 | https://doi.org/10.3389/fepid.2023.1177752
+Modeling the effect of observational social learning on parental decision-making for childhood vaccination and diseases spread over household networks  
+Tamer Oraby and Andras Balogh  
+Front. Epidemiol., 12 January 2024  
+Sec. Infectious Disease Epidemiology  
+Volume 3 - 2023 | https://doi.org/10.3389/fepid.2023.1177752  
 
 ### How do I get set up? 
 * Not sure if it works under MS Windows due to CuRAND library calls from device
