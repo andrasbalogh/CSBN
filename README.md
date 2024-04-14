@@ -1,7 +1,7 @@
 # CSBN
  Coupled Social and Biological Networks
 
-### How do I get set up? ###
+### How do I get set up? 
 * Not sure if it works under MS Windows due to CuRAND library calls from device
 * CUDA: https://developer.nvidia.com/cuda-downloads
 * Python: https://www.python.org
@@ -17,7 +17,7 @@
 * qstat.py  analyzis of dependence on q 
 * network_check.py   network statistics (works only for N=100 or smaller)
 * R0_run.py => fR0.py, kernels_R0.py, R0-params.csv Uses its own parameters instead of parameters.py
-### Running the code (short version)###
+### Running the code (short version)
 * Edit the parameters.py file, set network_run=1, network_save=1, epidemic_run=0 
 * Run csbn_run.py to generate only network
 * Check  data/network_diagnostics....pdf
@@ -29,7 +29,7 @@
   * Edit the parameters in the file R0_run.py
   * Run the code R0_run.py
 
-### Running the code (longer version)###
+### Running the code (longer version)
 * First networks are generated and saved in files data/csbn_network....npz, histogram "printed" in data/network_diagnostics....pdf 
 * The work is distributed over several GPUs based on the number of network to be used.
 * The epidemics part reads these netwrok files and runs the epidemics on them for a range of q values. results are saved in data/epidemics-q-...txt and "printed" in data/epidemics....pdf
